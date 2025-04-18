@@ -29,9 +29,13 @@
 #include "pool.h"
 #include "st7735.h"
 #include "UI.h"
+#include "icm20948.h"
+#include "tim.h"
+#include "wheel.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
+typedef StaticTask_t osStaticThreadDef_t;
 /* USER CODE BEGIN PTD */
 
 /* USER CODE END PTD */
@@ -58,24 +62,63 @@ const osThreadAttr_t defaultTask_attributes = {
 };
 /* Definitions for blink */
 osThreadId_t blinkHandle;
+uint32_t blinkBuffer[ 128 ];
+osStaticThreadDef_t blinkControlBlock;
 const osThreadAttr_t blink_attributes = {
   .name = "blink",
-  .stack_size = 128 * 4,
+  .cb_mem = &blinkControlBlock,
+  .cb_size = sizeof(blinkControlBlock),
+  .stack_mem = &blinkBuffer[0],
+  .stack_size = sizeof(blinkBuffer),
   .priority = (osPriority_t) osPriorityLow,
 };
 /* Definitions for angle */
 osThreadId_t angleHandle;
+uint32_t angleBuffer[ 128 ];
+osStaticThreadDef_t angleControlBlock;
 const osThreadAttr_t angle_attributes = {
   .name = "angle",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityHigh,
+  .cb_mem = &angleControlBlock,
+  .cb_size = sizeof(angleControlBlock),
+  .stack_mem = &angleBuffer[0],
+  .stack_size = sizeof(angleBuffer),
+  .priority = (osPriority_t) osPriorityHigh2,
 };
 /* Definitions for UI */
 osThreadId_t UIHandle;
+uint32_t UIBuffer[ 512 ];
+osStaticThreadDef_t UIControlBlock;
 const osThreadAttr_t UI_attributes = {
   .name = "UI",
-  .stack_size = 1280 * 4,
+  .cb_mem = &UIControlBlock,
+  .cb_size = sizeof(UIControlBlock),
+  .stack_mem = &UIBuffer[0],
+  .stack_size = sizeof(UIBuffer),
   .priority = (osPriority_t) osPriorityLow6,
+};
+/* Definitions for icm20948 */
+osThreadId_t icm20948Handle;
+uint32_t icm20948Buffer[ 256 ];
+osStaticThreadDef_t icm20948ControlBlock;
+const osThreadAttr_t icm20948_attributes = {
+  .name = "icm20948",
+  .cb_mem = &icm20948ControlBlock,
+  .cb_size = sizeof(icm20948ControlBlock),
+  .stack_mem = &icm20948Buffer[0],
+  .stack_size = sizeof(icm20948Buffer),
+  .priority = (osPriority_t) osPriorityHigh3,
+};
+/* Definitions for control */
+osThreadId_t controlHandle;
+uint32_t controlBuffer[ 256 ];
+osStaticThreadDef_t controlControlBlock;
+const osThreadAttr_t control_attributes = {
+  .name = "control",
+  .cb_mem = &controlControlBlock,
+  .cb_size = sizeof(controlControlBlock),
+  .stack_mem = &controlBuffer[0],
+  .stack_size = sizeof(controlBuffer),
+  .priority = (osPriority_t) osPriorityHigh4,
 };
 
 /* Private function prototypes -----------------------------------------------*/
@@ -87,6 +130,8 @@ void StartDefaultTask(void *argument);
 void blinkTask(void *argument);
 void angleTask(void *argument);
 void UITask(void *argument);
+void icm20948Task(void *argument);
+void controlTask(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -128,6 +173,12 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of UI */
   UIHandle = osThreadNew(UITask, NULL, &UI_attributes);
+
+  /* creation of icm20948 */
+  icm20948Handle = osThreadNew(icm20948Task, NULL, &icm20948_attributes);
+
+  /* creation of control */
+  controlHandle = osThreadNew(controlTask, NULL, &control_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -194,7 +245,7 @@ void angleTask(void *argument)
     HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
     adc_val = HAL_ADC_GetValue(&hadc1);
     HAL_ADC_Stop(&hadc1);
-    angle = adc_val * 360.0f / 4095.0f;
+    angle_adc = adc_val * 360.0f / 4095.0f;
     osDelay(1);
   }
   /* USER CODE END angleTask */
@@ -221,6 +272,63 @@ void UITask(void *argument)
     osDelay(20);
   }
   /* USER CODE END UITask */
+}
+
+/* USER CODE BEGIN Header_icm20948Task */
+/**
+* @brief Function implementing the icm20948 thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_icm20948Task */
+void icm20948Task(void *argument)
+{
+  /* USER CODE BEGIN icm20948Task */
+  uint16_t last_count = 0;
+  HAL_TIM_Base_Start(&htim4);
+  // icm20948_init();
+  // ak09916_init();
+  /* Infinite loop */
+  for(;;)
+  {
+    // icm20948_gyro_read_dps(&gyro);
+    // ak09916_mag_read(&mag);
+    // angle yaw
+    const uint16_t now = __HAL_TIM_GET_COUNTER(&htim4);
+    const uint16_t delta = (now >= last_count) ? (now - last_count) : (0xFFFF - last_count + now + 1);
+    last_count = now;
+    const float dt = (float)delta * 1e-6f;
+    angle_yaw += gyro.z * dt;
+    // angle azimuth
+
+    osDelay(1);
+  }
+  /* USER CODE END icm20948Task */
+}
+
+/* USER CODE BEGIN Header_controlTask */
+/**
+* @brief Function implementing the control thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_controlTask */
+void controlTask(void *argument)
+{
+  /* USER CODE BEGIN controlTask */
+  Whell motor;
+  whell_init(&motor, &htim3, &htim2, TIM_CHANNEL_1, TIM_CHANNEL_2);
+  HAL_TIM_Encoder_Start(&htim3, TIM_CHANNEL_ALL);
+  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
+  /* Infinite loop */
+  for(;;)
+  {
+    speed = whell_get_speed(&motor);
+    whell_set_speed(&motor, speed_setpoint);
+    osDelay(10);
+  }
+  /* USER CODE END controlTask */
 }
 
 /* Private application code --------------------------------------------------*/

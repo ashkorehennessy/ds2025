@@ -165,7 +165,12 @@ void UI_init(){
             items[page][item].type = EMPTY;
         }
     }
-    UI_item_init(&items[0][0], "Angle", FLOAT, &angle);
+    UI_item_init(&items[0][0], "AnADC", FLOAT, &angle_adc);
+    UI_item_init(&items[0][1], "AnYaw", FLOAT, &angle_yaw);
+    UI_item_init(&items[0][2], "AnAzi", FLOAT, &angle_azimuth);
+    UI_item_init(&items[0][3], "MagX ", FLOAT, &mag.x);
+    UI_item_init(&items[0][4], "Speed", INT32, &speed);
+    UI_item_init(&items[0][5], "SpSet", INT32, &speed_setpoint);
 
 }
 

@@ -54,7 +54,8 @@ void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(blink_GPIO_Port, blink_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, res_Pin|dc_Pin|cs_Pin|bl_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, res_Pin|dc_Pin|cs_Pin|bl_Pin
+                          |icm2098_ncs_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : blink_Pin */
   GPIO_InitStruct.Pin = blink_Pin;
@@ -76,11 +77,12 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : dip2_Pin dip1_Pin dip0_Pin */
-  GPIO_InitStruct.Pin = dip2_Pin|dip1_Pin|dip0_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  /*Configure GPIO pin : icm2098_ncs_Pin */
+  GPIO_InitStruct.Pin = icm2098_ncs_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  HAL_GPIO_Init(icm2098_ncs_GPIO_Port, &GPIO_InitStruct);
 
 }
 

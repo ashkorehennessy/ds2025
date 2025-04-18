@@ -419,7 +419,7 @@ void icm20948_accel_full_scale_select(accel_full_scale full_scale)
 /* Static Functions */
 static void cs_high()
 {
-	HAL_GPIO_WritePin(ICM20948_SPI_CS_PIN_PORT, ICM20948_SPI_CS_PIN_NUMBER, SET);	
+	HAL_GPIO_WritePin(ICM20948_SPI_CS_PIN_PORT, ICM20948_SPI_CS_PIN_NUMBER, SET);
 }
 
 static void cs_low()
