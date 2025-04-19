@@ -7,14 +7,12 @@
 
 #include "PID.h"
 
-PID_Base PID_Base_Init(float Kp, float Kp2, float Ki, float Kd, float GzKd, float outmax, float outmin,
+PID_Base PID_Base_Init(float Kp, float Ki, float Kd, float outmax, float outmin,
                        uint8_t use_lowpass_filter, float lowpass_filter_factor) {
     PID_Base pid;
     pid.Kp = Kp;
-    pid.Kp2 = Kp2;
     pid.Ki = Ki;
     pid.Kd = Kd;
-    pid.GzKd = GzKd;
     pid.last_error = 0;
     pid.last_out = 0;
     pid.integral = 0;
@@ -25,12 +23,12 @@ PID_Base PID_Base_Init(float Kp, float Kp2, float Ki, float Kd, float GzKd, floa
     return pid;
 }
 
-float PID_Base_Calc(PID_Base *pid, float input_value, float gyroz_value, float setpoint) {
+float PID_Base_Calc(PID_Base *pid, float input_value, float setpoint) {
     float error = setpoint - input_value;
     float derivative = error - pid->last_error;
     pid->integral += error;
     pid->last_error = error;
-    float output = pid->Kp * error + pid->Kp2 * error * fabs(error) + pid->Ki * pid->integral + pid->Kd * derivative + pid->GzKd * gyroz_value;
+    float output = pid->Kp * error + pid->Ki * pid->integral + pid->Kd * derivative;
 
     // Integral limit
     if(pid->integral > pid->outmax/9){

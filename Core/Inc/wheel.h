@@ -5,7 +5,6 @@
 #ifndef BALANCE_CAR_WHEEL_H
 #define BALANCE_CAR_WHEEL_H
 
-#endif //BALANCE_CAR_WHEEL_H
 #include "stm32f4xx_hal.h"
 
 
@@ -23,3 +22,5 @@ void whell_init(Whell *wheel, TIM_HandleTypeDef *encoder_tim, TIM_HandleTypeDef 
 int whell_get_speed(Whell *wheel);
 
 void whell_set_speed(Whell *wheel, int speed);
+
+#endif //BALANCE_CAR_WHEEL_H
