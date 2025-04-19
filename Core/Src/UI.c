@@ -165,16 +165,23 @@ void UI_init(){
             items[page][item].type = EMPTY;
         }
     }
-    UI_item_init(&items[0][0], "AnADC", FLOAT, &angle_adc);
-    UI_item_init(&items[0][1], "AnYaw", FLOAT, &angle_yaw);
-    UI_item_init(&items[0][2], "Ansho", FLOAT, &angle_show);
+    UI_item_init(&items[0][0], "adang", FLOAT, &angle_adc);
+    UI_item_init(&items[0][1], "ywang", FLOAT, &angle_yaw);
+    UI_item_init(&items[0][2], "shang", FLOAT, &angle_top);
     UI_item_init(&items[0][3], "Speed", FLOAT, &speed);
+    UI_item_init(&items[0][4], "adraw", UINT32, &adc_raw);
     UI_item_init(&items[1][0], "ywang", FLOAT, &angle_yaw);
     UI_item_init(&items[1][1], "ywout", FLOAT, &yaw_pidout);
     UI_item_init(&items[1][2], "targe", FLOAT, &target_angle_yaw);
     UI_item_init(&items[1][3], "Speed", FLOAT, &speed);
     UI_item_init(&items[1][4], "run  ", INT32, &task_running);
     UI_item_init(&items[1][5], "index", INT32, &task_index);
+    UI_item_init(&items[4][0], "shang", FLOAT, &angle_top);
+    UI_item_init(&items[4][1], "ywang", FLOAT, &angle_yaw);
+    UI_item_init(&items[4][2], "Speed", FLOAT, &speed);
+    UI_item_init(&items[4][3], "ywout", FLOAT, &yaw_pidout);
+    UI_item_init(&items[4][4], "run  ", INT32, &task_running);
+    UI_item_init(&items[4][5], "off  ", FLOAT, &offset);
 
 
 }
@@ -299,7 +306,6 @@ void UI_key_process(){
         key_pressed = 1;
         if (task_running == 0) {
             start_task(task_index);
-            task_running = 1;
         }
     } else if(!KEY_BACK && key_back_pressed){
         key_back_pressed = 0;

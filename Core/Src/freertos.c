@@ -102,8 +102,15 @@ const osThreadAttr_t control_attributes = {
 osThreadId_t task1Handle;
 const osThreadAttr_t task1_attributes = {
   .name = "task1",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityLow,
+  .stack_size = 256 * 4,
+  .priority = (osPriority_t) osPriorityHigh3,
+};
+/* Definitions for task4 */
+osThreadId_t task4Handle;
+const osThreadAttr_t task4_attributes = {
+  .name = "task4",
+  .stack_size = 256 * 4,
+  .priority = (osPriority_t) osPriorityHigh3,
 };
 
 /* Private function prototypes -----------------------------------------------*/
@@ -116,6 +123,7 @@ void angleTask(void *argument);
 void UITask(void *argument);
 void controlTask(void *argument);
 void Task1(void *argument);
+void Task4(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -161,6 +169,9 @@ void MX_FREERTOS_Init(void) {
   /* creation of task1 */
   // task1Handle = osThreadNew(Task1, NULL, &task1_attributes);
 
+  /* creation of task4 */
+  task4Handle = osThreadNew(Task4, NULL, &task4_attributes);
+
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -201,8 +212,8 @@ void angleTask(void *argument)
 {
   /* USER CODE BEGIN angleTask */
   float angle = 0;
-  float last_angle = 0;
-
+  uint32_t adc_sum = 0;
+  uint32_t adc_windows[20] = {0};
   /* Infinite loop */
   for(;;)
   {
@@ -210,24 +221,23 @@ void angleTask(void *argument)
     HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
     adc_raw = HAL_ADC_GetValue(&hadc1);
     HAL_ADC_Stop(&hadc1);
-
-    angle = (float)adc_raw * 360.0f / 4095.0f;
-    angle -= angle_offset;
-    angle = alpha * last_angle + (1 - alpha) * angle;
-
-    angle_adc = angle - 180;
-    if (angle_adc < -170) {
-      angle_adc+=4;
+    // 更新窗口
+    for (int i = 0; i < 19; i++) {
+      adc_windows[i] = adc_windows[i + 1];
     }
-    if (angle_adc > 80 && angle_adc < 100) {
-      angle_adc-=5;
-    }
+    adc_windows[19] = adc_raw;
+    adc_sum -= adc_windows[0];
+    adc_sum += adc_windows[19];
+
+    angle = (float)adc_sum / 20 * 360.0f / 4095.0f;  // adc到角度转换
+    angle = (angle - 6) * 45 / 44;  // 角度修正
+    if (angle < 0) angle += 360.0f;
+    angle_adc = angle;
     if (angle_adc > 0) {
-      angle_show = angle_adc - 180;
+      angle_top = -(angle_adc - 180);
     } else {
-      angle_show = angle_adc + 180;
+      angle_top = -(angle_adc + 180);
     }
-    last_angle = angle;
     osDelay(1);
   }
   /* USER CODE END angleTask */
@@ -266,7 +276,6 @@ void UITask(void *argument)
 void controlTask(void *argument)
 {
   /* USER CODE BEGIN controlTask */
-  // PID_Base adcpid = PID_Base_Init(-0.05f,0,-0.1f,0,5000,-5000,0,0);
   float last_speed = 0;
   uint32_t tick = osKernelGetTickCount();
   whell_init(&motor, &htim3, &htim2, TIM_CHANNEL_1, TIM_CHANNEL_2);
@@ -280,15 +289,6 @@ void controlTask(void *argument)
     speed = (float)whell_get_speed(&motor) * 0.5f + last_speed * 0.5f;
     last_speed = speed;
     angle_yaw += speed * 0.667f;
-    // adc_pidout = PID_Base_Calc(&adcpid, (float)adc_raw, 0, 2190-angle_yaw/2);
-    // yaw_pidout = PID_Base_Calc(&yawpid, speed ,0 ,-adc_pidout);
-    // if (yaw_pidout > 0)yaw_pidout += deadzone;
-    // if (yaw_pidout < 0)yaw_pidout -= deadzone;
-    // if (fabs(angle_adc) > 30) {
-    //   whell_set_speed(&motor, 0);
-    // } else {
-    //   whell_set_speed(&motor, (int)yaw_pidout);
-    // }
     tick += 10;
     osDelayUntil(tick);
   }
@@ -305,13 +305,14 @@ void controlTask(void *argument)
 void Task1(void *argument)
 {
   /* USER CODE BEGIN Task1 */
-  PID_Base yawpid = PID_Base_Init(100,0,1500,7000,-7000,0,0);
+  task_running = 1;
+  PID_Base yawpid = PID_Base_Init(100,0,1500,7000,-7000,1,0.5f);
   uint32_t tick = osKernelGetTickCount();
   uint32_t invalid_tick = tick;
   /* Infinite loop */
-  while (tick - invalid_tick < 2000)
+  while (tick - invalid_tick < 400)
   {
-    if (fabs(target_angle_yaw - angle_yaw) > 3) {
+    if (fabs(target_angle_yaw - angle_yaw) > 2) {
       invalid_tick = tick;
     }
     yaw_pidout = PID_Base_Calc(&yawpid, angle_yaw, target_angle_yaw);
@@ -321,10 +322,50 @@ void Task1(void *argument)
     tick += 10;
     osDelayUntil(tick);
   }
-  task_running = 0;
   whell_set_speed(&motor, 0);
+  task_running = 0;
   osThreadExit();
   /* USER CODE END Task1 */
+}
+
+/* USER CODE BEGIN Header_Task4 */
+/**
+* @brief Function implementing the task4 thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_Task4 */
+void Task4(void *argument)
+{
+  /* USER CODE BEGIN Task4 */
+  task_running = 1;
+  deadzone = 500;
+  PID_Base yawpid = PID_Base_Init(-400,0,-100,4000,-4000,0,0);
+  PID_Base adcpid = PID_Base_Init(1,0,3,1000,-1000,0,0);
+  uint32_t tick = osKernelGetTickCount();
+  uint32_t invalid_tick = tick;
+  /* Infinite loop */
+  while (tick - invalid_tick < 50000)
+  {
+    if (fabs(angle_top) > 30) {
+      invalid_tick = tick;
+    }
+    adc_pidout = PID_Base_Calc(&adcpid, angle_top,  0);
+    yaw_pidout = PID_Base_Calc(&yawpid, speed  ,-adc_pidout);
+    if (yaw_pidout > 0)yaw_pidout += deadzone;
+    if (yaw_pidout < 0)yaw_pidout -= deadzone;
+    if (fabs(angle_top) > 30) {
+      whell_set_speed(&motor, 0);
+    } else {
+      whell_set_speed(&motor, (int)yaw_pidout);
+    }
+    tick += 10;
+    osDelayUntil(tick);
+  }
+  whell_set_speed(&motor, 0);
+  task_running = 0;
+  osThreadExit();
+  /* USER CODE END Task4 */
 }
 
 /* Private application code --------------------------------------------------*/
@@ -333,6 +374,7 @@ void start_task(int index)
 {
   switch (index) {
   case 1: task1Handle = osThreadNew(Task1, NULL, &task1_attributes);break;
+  case 4: task4Handle = osThreadNew(Task4, NULL, &task4_attributes);break;
   }
 }
 /* USER CODE END Application */
