@@ -7,9 +7,9 @@
 
 #include "stm32f4xx_hal.h"
 
-#define DIP_SWITCH_1 (0)
-#define DIP_SWITCH_2 (0)
-#define DIP_SWITCH_3 (0)
+#define DIP_SWITCH_1 (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_8))
+#define DIP_SWITCH_2 (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_6))
+#define DIP_SWITCH_3 (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_9))
 #define DIP_SWITCH   ((DIP_SWITCH_1) | (DIP_SWITCH_2) << 1 | (DIP_SWITCH_3) << 2)
 
 #define SWITCH_1 (!HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_15))

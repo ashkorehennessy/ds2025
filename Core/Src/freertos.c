@@ -29,9 +29,11 @@
 #include "pool.h"
 #include "st7735.h"
 #include "UI.h"
-#include "icm20948.h"
 #include "tim.h"
 #include "wheel.h"
+#include "tgmath.h"
+#include "PID.h"
+#include "timers.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -60,18 +62,6 @@ const osThreadAttr_t defaultTask_attributes = {
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
-/* Definitions for blink */
-osThreadId_t blinkHandle;
-uint32_t blinkBuffer[ 128 ];
-osStaticThreadDef_t blinkControlBlock;
-const osThreadAttr_t blink_attributes = {
-  .name = "blink",
-  .cb_mem = &blinkControlBlock,
-  .cb_size = sizeof(blinkControlBlock),
-  .stack_mem = &blinkBuffer[0],
-  .stack_size = sizeof(blinkBuffer),
-  .priority = (osPriority_t) osPriorityLow,
-};
 /* Definitions for angle */
 osThreadId_t angleHandle;
 uint32_t angleBuffer[ 128 ];
@@ -94,19 +84,7 @@ const osThreadAttr_t UI_attributes = {
   .cb_size = sizeof(UIControlBlock),
   .stack_mem = &UIBuffer[0],
   .stack_size = sizeof(UIBuffer),
-  .priority = (osPriority_t) osPriorityLow6,
-};
-/* Definitions for icm20948 */
-osThreadId_t icm20948Handle;
-uint32_t icm20948Buffer[ 256 ];
-osStaticThreadDef_t icm20948ControlBlock;
-const osThreadAttr_t icm20948_attributes = {
-  .name = "icm20948",
-  .cb_mem = &icm20948ControlBlock,
-  .cb_size = sizeof(icm20948ControlBlock),
-  .stack_mem = &icm20948Buffer[0],
-  .stack_size = sizeof(icm20948Buffer),
-  .priority = (osPriority_t) osPriorityHigh3,
+  .priority = (osPriority_t) osPriorityNormal1,
 };
 /* Definitions for control */
 osThreadId_t controlHandle;
@@ -127,10 +105,8 @@ const osThreadAttr_t control_attributes = {
 /* USER CODE END FunctionPrototypes */
 
 void StartDefaultTask(void *argument);
-void blinkTask(void *argument);
 void angleTask(void *argument);
 void UITask(void *argument);
-void icm20948Task(void *argument);
 void controlTask(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
@@ -165,17 +141,11 @@ void MX_FREERTOS_Init(void) {
   /* creation of defaultTask */
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
-  /* creation of blink */
-  blinkHandle = osThreadNew(blinkTask, NULL, &blink_attributes);
-
   /* creation of angle */
   angleHandle = osThreadNew(angleTask, NULL, &angle_attributes);
 
   /* creation of UI */
   UIHandle = osThreadNew(UITask, NULL, &UI_attributes);
-
-  /* creation of icm20948 */
-  icm20948Handle = osThreadNew(icm20948Task, NULL, &icm20948_attributes);
 
   /* creation of control */
   controlHandle = osThreadNew(controlTask, NULL, &control_attributes);
@@ -203,28 +173,10 @@ void StartDefaultTask(void *argument)
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
-  }
-  /* USER CODE END StartDefaultTask */
-}
-
-/* USER CODE BEGIN Header_blinkTask */
-/**
-* @brief Function implementing the blink thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_blinkTask */
-void blinkTask(void *argument)
-{
-  /* USER CODE BEGIN blinkTask */
-  /* Infinite loop */
-  for(;;)
-  {
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
     osDelay(500);
   }
-  /* USER CODE END blinkTask */
+  /* USER CODE END StartDefaultTask */
 }
 
 /* USER CODE BEGIN Header_angleTask */
@@ -237,15 +189,34 @@ void blinkTask(void *argument)
 void angleTask(void *argument)
 {
   /* USER CODE BEGIN angleTask */
+  float angle = 0;
+  float last_angle = 0;
+
   /* Infinite loop */
-  uint32_t adc_val = 0;
   for(;;)
   {
     HAL_ADC_Start(&hadc1);
     HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
-    adc_val = HAL_ADC_GetValue(&hadc1);
+    adc_raw = HAL_ADC_GetValue(&hadc1);
     HAL_ADC_Stop(&hadc1);
-    angle_adc = adc_val * 360.0f / 4095.0f;
+
+    angle = (float)adc_raw * 360.0f / 4095.0f;
+    angle -= angle_offset;
+    angle = alpha * last_angle + (1 - alpha) * angle;
+
+    angle_adc = angle - 180;
+    if (angle_adc < -170) {
+      angle_adc+=4;
+    }
+    if (angle_adc > 80 && angle_adc < 100) {
+      angle_adc-=5;
+    }
+    if (angle_adc > 0) {
+      angle_show = angle_adc - 180;
+    } else {
+      angle_show = angle_adc + 180;
+    }
+    last_angle = angle;
     osDelay(1);
   }
   /* USER CODE END angleTask */
@@ -274,38 +245,6 @@ void UITask(void *argument)
   /* USER CODE END UITask */
 }
 
-/* USER CODE BEGIN Header_icm20948Task */
-/**
-* @brief Function implementing the icm20948 thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_icm20948Task */
-void icm20948Task(void *argument)
-{
-  /* USER CODE BEGIN icm20948Task */
-  uint16_t last_count = 0;
-  HAL_TIM_Base_Start(&htim4);
-  // icm20948_init();
-  // ak09916_init();
-  /* Infinite loop */
-  for(;;)
-  {
-    // icm20948_gyro_read_dps(&gyro);
-    // ak09916_mag_read(&mag);
-    // angle yaw
-    const uint16_t now = __HAL_TIM_GET_COUNTER(&htim4);
-    const uint16_t delta = (now >= last_count) ? (now - last_count) : (0xFFFF - last_count + now + 1);
-    last_count = now;
-    const float dt = (float)delta * 1e-6f;
-    angle_yaw += gyro.z * dt;
-    // angle azimuth
-
-    osDelay(1);
-  }
-  /* USER CODE END icm20948Task */
-}
-
 /* USER CODE BEGIN Header_controlTask */
 /**
 * @brief Function implementing the control thread.
@@ -316,7 +255,10 @@ void icm20948Task(void *argument)
 void controlTask(void *argument)
 {
   /* USER CODE BEGIN controlTask */
+  PID_Base yawpid = PID_Base_Init(-500,0,0,-200,0,5000,-5000,0,0);
+  PID_Base adcpid = PID_Base_Init(-0.03f,0,0,-0.08f,0,1000,-1000,0,0);
   Whell motor;
+  float last_speed = 0;
   whell_init(&motor, &htim3, &htim2, TIM_CHANNEL_1, TIM_CHANNEL_2);
   HAL_TIM_Encoder_Start(&htim3, TIM_CHANNEL_ALL);
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
@@ -324,8 +266,18 @@ void controlTask(void *argument)
   /* Infinite loop */
   for(;;)
   {
-    speed = whell_get_speed(&motor);
-    whell_set_speed(&motor, speed_setpoint);
+    speed = (float)whell_get_speed(&motor) * 0.75f + last_speed * 0.25f;
+    last_speed = speed;
+    angle_yaw += speed * 0.667f;
+    adc_pidout = PID_Base_Calc(&adcpid, (float)adc_raw, 0, 2190-angle_yaw/2);
+    yaw_pidout = PID_Base_Calc(&yawpid, speed + adc_pidout ,0 ,0);
+    if (yaw_pidout > 0)yaw_pidout += deadzone;
+    if (yaw_pidout < 0)yaw_pidout -= deadzone;
+    if (fabs(angle_adc) > 30) {
+      whell_set_speed(&motor, 0);
+    } else {
+      whell_set_speed(&motor, (int)yaw_pidout);
+    }
     osDelay(10);
   }
   /* USER CODE END controlTask */

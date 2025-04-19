@@ -5,12 +5,15 @@
 #ifndef POOL_H
 #define POOL_H
 #include <stdint.h>
-#include "icm20948.h"
 extern float angle_adc;
+extern float angle_show;
 extern float angle_yaw;
-extern float angle_azimuth;
-extern int speed;
+extern float speed;
 extern int speed_setpoint;
-extern axises gyro;
-extern axises mag;
+extern float angle_offset;
+extern float alpha;
+extern float adc_pidout;
+extern float yaw_pidout;
+extern float deadzone;
+extern uint32_t adc_raw;
 #endif //POOL_H

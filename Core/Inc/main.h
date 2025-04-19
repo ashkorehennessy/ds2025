@@ -73,8 +73,6 @@ void Error_Handler(void);
 #define bl_GPIO_Port GPIOA
 #define sda_Pin GPIO_PIN_7
 #define sda_GPIO_Port GPIOA
-#define icm20948_sclk_Pin GPIO_PIN_0
-#define icm20948_sclk_GPIO_Port GPIOB
 #define sw3_Pin GPIO_PIN_12
 #define sw3_GPIO_Port GPIOB
 #define sw2_Pin GPIO_PIN_13
@@ -85,8 +83,8 @@ void Error_Handler(void);
 #define sw0_GPIO_Port GPIOB
 #define icm20948_sdi_Pin GPIO_PIN_10
 #define icm20948_sdi_GPIO_Port GPIOA
-#define icm2098_ncs_Pin GPIO_PIN_11
-#define icm2098_ncs_GPIO_Port GPIOA
+#define icm20948_ncs_Pin GPIO_PIN_11
+#define icm20948_ncs_GPIO_Port GPIOA
 #define icm20948_sdo_Pin GPIO_PIN_12
 #define icm20948_sdo_GPIO_Port GPIOA
 #define motor_pwm_a_Pin GPIO_PIN_15
@@ -97,6 +95,12 @@ void Error_Handler(void);
 #define encoder_a_GPIO_Port GPIOB
 #define encoder_b_Pin GPIO_PIN_5
 #define encoder_b_GPIO_Port GPIOB
+#define dip2_Pin GPIO_PIN_6
+#define dip2_GPIO_Port GPIOB
+#define dip1_Pin GPIO_PIN_8
+#define dip1_GPIO_Port GPIOB
+#define dip0_Pin GPIO_PIN_9
+#define dip0_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

@@ -11,8 +11,8 @@
 
 #define FONT_W 11
 #define FONT_H 18
-#define SCREEN_W 128
-#define SCREEN_H 160
+#define SCREEN_W 160
+#define SCREEN_H 128
 
 #define KEY_FORWARD SWITCH_1
 #define KEY_UP SWITCH_2

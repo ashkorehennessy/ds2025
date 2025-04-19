@@ -38,6 +38,8 @@
         * Output
         * EVENT_OUT
         * EXTI
+     PA10   ------> SPI5_MOSI
+     PA12   ------> SPI5_MISO
 */
 void MX_GPIO_Init(void)
 {
@@ -55,7 +57,7 @@ void MX_GPIO_Init(void)
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOA, res_Pin|dc_Pin|cs_Pin|bl_Pin
-                          |icm2098_ncs_Pin, GPIO_PIN_RESET);
+                          |icm20948_ncs_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : blink_Pin */
   GPIO_InitStruct.Pin = blink_Pin;
@@ -64,25 +66,30 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(blink_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : res_Pin dc_Pin cs_Pin bl_Pin */
-  GPIO_InitStruct.Pin = res_Pin|dc_Pin|cs_Pin|bl_Pin;
+  /*Configure GPIO pins : res_Pin dc_Pin cs_Pin bl_Pin
+                           icm20948_ncs_Pin */
+  GPIO_InitStruct.Pin = res_Pin|dc_Pin|cs_Pin|bl_Pin
+                          |icm20948_ncs_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : sw3_Pin sw2_Pin sw1_Pin sw0_Pin */
-  GPIO_InitStruct.Pin = sw3_Pin|sw2_Pin|sw1_Pin|sw0_Pin;
+  /*Configure GPIO pins : sw3_Pin sw2_Pin sw1_Pin sw0_Pin
+                           dip2_Pin dip1_Pin dip0_Pin */
+  GPIO_InitStruct.Pin = sw3_Pin|sw2_Pin|sw1_Pin|sw0_Pin
+                          |dip2_Pin|dip1_Pin|dip0_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : icm2098_ncs_Pin */
-  GPIO_InitStruct.Pin = icm2098_ncs_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  /*Configure GPIO pins : icm20948_sdi_Pin icm20948_sdo_Pin */
+  GPIO_InitStruct.Pin = icm20948_sdi_Pin|icm20948_sdo_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-  HAL_GPIO_Init(icm2098_ncs_GPIO_Port, &GPIO_InitStruct);
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF6_SPI5;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
 }
 

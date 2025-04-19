@@ -140,7 +140,7 @@ void UI_item_show_value(const UI_item *item, uint16_t x, uint16_t y, FontDef fon
             if(value > 9999999999 || value < -999999999){
                 sprintf(buf, " Out range");
             } else {
-                sprintf(buf, "%5.0f", value);
+                sprintf(buf, "%8.0f", value);
             }
             break;
         case DOUBLE:
@@ -148,14 +148,14 @@ void UI_item_show_value(const UI_item *item, uint16_t x, uint16_t y, FontDef fon
             if(value > 9999999.99 || value < -999999.99){
                 sprintf(buf, " Out range");
             } else {
-                sprintf(buf, "%5.1f", UI_item_get_value(item));
+                sprintf(buf, "%8.2f", UI_item_get_value(item));
             }
             break;
         case CHAR:
-            sprintf(buf, "%5c", (char) value);
+            sprintf(buf, "%8c", (char) value);
             break;
     }
-    ST7735_WriteString(x, y,buf, font, ST7735_WHITE, ST7735_BLACK);
+    ST7735_WriteString(x, y, buf, font, ST7735_WHITE, ST7735_BLACK);
 }
 
 void UI_init(){
@@ -167,10 +167,12 @@ void UI_init(){
     }
     UI_item_init(&items[0][0], "AnADC", FLOAT, &angle_adc);
     UI_item_init(&items[0][1], "AnYaw", FLOAT, &angle_yaw);
-    UI_item_init(&items[0][2], "AnAzi", FLOAT, &angle_azimuth);
-    UI_item_init(&items[0][3], "MagX ", FLOAT, &mag.x);
-    UI_item_init(&items[0][4], "Speed", INT32, &speed);
-    UI_item_init(&items[0][5], "SpSet", INT32, &speed_setpoint);
+    UI_item_init(&items[0][2], "Ansho", FLOAT, &angle_show);
+    UI_item_init(&items[0][3], "Speed", FLOAT, &speed);
+    UI_item_init(&items[1][0], "adout", FLOAT, &adc_pidout);
+    UI_item_init(&items[1][1], "ywout", FLOAT, &yaw_pidout);
+    UI_item_init(&items[1][2], "ADraw", UINT32, &adc_raw);
+    UI_item_init(&items[1][3], "Speed", FLOAT, &speed);
 
 }
 
@@ -187,7 +189,7 @@ void UI_show(){
         key_pressed = 0;
 
         ST7735_FillScreenFast(ST7735_BLACK);
-        sprintf(buf, "Page%d  10%+d", dip_switch, exponent);
+        sprintf(buf, "Page%d     10%+d", dip_switch, exponent);
         ST7735_WriteString(0, 0, buf, Font_11x18, ST7735_GREEN, ST7735_BLACK);
         for(int i = 0; i < 9; i++) {
             ST7735_WriteString(0, FONT_H * i + FONT_H, "|", Font_11x18, ST7735_GREEN, ST7735_BLACK);
@@ -203,7 +205,7 @@ void UI_show(){
             case 2:
                 ST7735_WriteString(0, FONT_H * cursor_pos + FONT_H, "^", Font_11x18, ST7735_GREEN, ST7735_BLACK);
                 sprintf(buf, "%+d", exponent);
-                ST7735_WriteString(99, 0, buf, Font_11x18, ST7735_RED, ST7735_BLACK);
+                ST7735_WriteString(131, 0, buf, Font_11x18, ST7735_RED, ST7735_BLACK);
                 break;
         }
         // 显示所有的item
