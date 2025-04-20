@@ -194,11 +194,30 @@ void UI_show(){
 
     // 显示静态部分
     if(show_static_part) {
+
         last_dip_switch = dip_switch;
         last_ui_state = ui_state;
         key_pressed = 0;
 
         ST7735_FillScreenFast(ST7735_BLACK);
+        if (dip_switch == 7) {
+            // draw timeline to x-axis
+            ST7735_WriteString(10,120,"1500",Font_7x10,ST7735_YELLOW,ST7735_BLACK);
+            ST7735_WriteString(40,120,"1125",Font_7x10,ST7735_YELLOW,ST7735_BLACK);
+            ST7735_WriteString(70,120," 750",Font_7x10,ST7735_YELLOW,ST7735_BLACK);
+            ST7735_WriteString(100,120," 375",Font_7x10,ST7735_YELLOW,ST7735_BLACK);
+            ST7735_WriteString(130,120,"   0",Font_7x10,ST7735_YELLOW,ST7735_BLACK);
+            // draw angle line to y-axis
+            ST7735_WriteString(0,0,"-90",Font_7x10,ST7735_YELLOW,ST7735_BLACK);
+            ST7735_WriteString(0,18,"-60",Font_7x10,ST7735_YELLOW,ST7735_BLACK);
+            ST7735_WriteString(0,36,"-30",Font_7x10,ST7735_YELLOW,ST7735_BLACK);
+            ST7735_WriteString(0,55,"  0",Font_7x10,ST7735_YELLOW,ST7735_BLACK);
+            ST7735_WriteString(0,74," 30",Font_7x10,ST7735_YELLOW,ST7735_BLACK);
+            ST7735_WriteString(0,92," 60",Font_7x10,ST7735_YELLOW,ST7735_BLACK);
+            ST7735_WriteString(0,110," 90",Font_7x10,ST7735_YELLOW,ST7735_BLACK);
+            UI_show_custom_part();
+            return;
+        }
         sprintf(buf, "Page%d     10%+d", dip_switch, exponent);
         ST7735_WriteString(0, 0, buf, Font_11x18, ST7735_GREEN, ST7735_BLACK);
         for(int i = 0; i < 9; i++) {
@@ -234,6 +253,21 @@ void UI_show(){
 }
 
 void UI_show_custom_part(){
+    switch (DIP_SWITCH) {
+    case 7:
+        ST7735_FillRectangleFast(30,0,150,120,ST7735_BLACK);
+        // draw samples
+        for (int i=0;i<140;i++) {
+            int x=i+30;
+            int y=(samples[i]/1.5f)+60;
+            if (y < 1)y = 1;
+            if (y > 119)y = 119;
+            if (x > 0 && x < 160 && y > 0 && y < 128) {
+                ST7735_DrawPixel(x, y, ST7735_WHITE);
+            }
+        }
+        break;
+    }
 }
 void UI_key_process(){
     static int8_t key_forward_pressed = 0;
