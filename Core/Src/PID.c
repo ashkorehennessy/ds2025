@@ -57,6 +57,12 @@ float PID_Base_Calc(PID_Base *pid, float input_value, float setpoint) {
     return output;
 }
 
+void PID_Base_clear(PID_Base *pid) {
+    pid->last_error = 0;
+    pid->last_out = 0;
+    pid->integral = 0;
+}
+
 PID_Incremental PID_Incremental_Init(float Kp, float Ki, float Kd, float outmax, float outmin, uint8_t use_lowpass_filter, float lowpass_filter_factor) {
     PID_Incremental pid;
     pid.Kp = Kp;

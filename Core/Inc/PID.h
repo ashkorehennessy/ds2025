@@ -44,6 +44,8 @@ PID_Base PID_Base_Init(float Kp, float Ki, float Kd, float outmax, float outmin,
 
 float PID_Base_Calc(PID_Base *pid, float input_value, float setpoint);
 
+void PID_Base_clear(PID_Base *pid);
+
 PID_Incremental PID_Incremental_Init(float Kp, float Ki, float Kd, float outmax, float outmin, uint8_t use_lowpass_filter, float lowpass_filter_factor);
 
 float PID_Incremental_Calc(PID_Incremental *pid, float input_value, float setpoint);
