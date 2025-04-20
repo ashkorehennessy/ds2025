@@ -19,6 +19,7 @@ extern float yaw_pidout;
 extern float nav_pidout;
 extern float deadzone;
 extern uint32_t adc_raw;
+extern float adc_use;
 extern Whell motor;
 extern float target_angle_yaw;
 extern int task_running;

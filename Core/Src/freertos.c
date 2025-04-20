@@ -228,8 +228,8 @@ void angleTask(void *argument)
     adc_windows[19] = adc_raw;
     adc_sum -= adc_windows[0];
     adc_sum += adc_windows[19];
-
-    angle = (float)adc_sum / 20 * 360.0f / 4095.0f;  // adc到角度转换
+    adc_use = (float)adc_sum / 20;
+    angle = adc_use * 360.0f / 4095.0f;  // adc到角度转换
     angle = (angle - 6) * 45 / 44;  // 角度修正
     if (angle < 0) angle += 360.0f;
     angle_adc = angle;
@@ -339,18 +339,29 @@ void Task4(void *argument)
 {
   /* USER CODE BEGIN Task4 */
   task_running = 1;
-  deadzone = 500;
-  PID_Base yawpid = PID_Base_Init(-400,0,-100,4000,-4000,0,0);
-  PID_Base adcpid = PID_Base_Init(1,0,3,1000,-1000,0,0);
+  deadzone = 600;
+  PID_Base yawpid = PID_Base_Init(-500,-0,-200,5000,-5000,0,0.5);
+  PID_Base adcpid = PID_Base_Init(-0.03f,-0.02f,-0.15f,50,-50,0,0.5);
   uint32_t tick = osKernelGetTickCount();
   uint32_t invalid_tick = tick;
+  float last_angle_yaw = 0;
   /* Infinite loop */
   while (tick - invalid_tick < 50000)
   {
+    float angle_setpoint;
     if (fabs(angle_top) > 30) {
       invalid_tick = tick;
     }
-    adc_pidout = PID_Base_Calc(&adcpid, angle_top,  0);
+    if(fabs(angle_top) < 3) {
+      angle_setpoint = log(fabs(angle_yaw));
+      if (angle_setpoint < 0) angle_setpoint = 0;
+      if (angle_yaw < 0) angle_setpoint = -angle_setpoint;
+    } else {
+      angle_setpoint = 0;
+    }
+    float diff = angle_yaw - last_angle_yaw;
+    last_angle_yaw = angle_yaw;
+    adc_pidout = PID_Base_Calc(&adcpid, adc_use, 2060 - diff * 10 - angle_yaw);
     yaw_pidout = PID_Base_Calc(&yawpid, speed  ,-adc_pidout);
     if (yaw_pidout > 0)yaw_pidout += deadzone;
     if (yaw_pidout < 0)yaw_pidout -= deadzone;

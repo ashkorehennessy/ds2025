@@ -30,11 +30,14 @@ float PID_Base_Calc(PID_Base *pid, float input_value, float setpoint) {
     pid->last_error = error;
     float output = pid->Kp * error + pid->Ki * pid->integral + pid->Kd * derivative;
 
+    // Integral decay
+    pid->integral *= 0.90f;
+
     // Integral limit
-    if(pid->integral > pid->outmax/7){
-        pid->integral = pid->outmax/7;
-    } else if(pid->integral < pid->outmin/7){
-        pid->integral = pid->outmin/7;
+    if(pid->integral > pid->outmax){
+        pid->integral = pid->outmax;
+    } else if(pid->integral < pid->outmin){
+        pid->integral = pid->outmin;
     }
 
     // Output limit

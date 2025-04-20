@@ -169,7 +169,7 @@ void UI_init(){
     UI_item_init(&items[0][1], "ywang", FLOAT, &angle_yaw);
     UI_item_init(&items[0][2], "shang", FLOAT, &angle_top);
     UI_item_init(&items[0][3], "Speed", FLOAT, &speed);
-    UI_item_init(&items[0][4], "adraw", UINT32, &adc_raw);
+    UI_item_init(&items[0][4], "aduse", FLOAT, &adc_use);
     UI_item_init(&items[1][0], "ywang", FLOAT, &angle_yaw);
     UI_item_init(&items[1][1], "ywout", FLOAT, &yaw_pidout);
     UI_item_init(&items[1][2], "targe", FLOAT, &target_angle_yaw);

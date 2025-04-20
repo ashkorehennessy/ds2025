@@ -11,6 +11,7 @@ float alpha = 0.4f;
 float speed = 0;
 int speed_setpoint = 0;
 uint32_t adc_raw = 0;
+float adc_use = 0;
 float adc_pidout = 0;
 float yaw_pidout = 0;
 float nav_pidout = 0;
