@@ -79,7 +79,7 @@ const osThreadAttr_t angle_attributes = {
 };
 /* Definitions for UI */
 osThreadId_t UIHandle;
-uint32_t UIBuffer[ 512 ];
+uint32_t UIBuffer[ 1024 ];
 osStaticThreadDef_t UIControlBlock;
 const osThreadAttr_t UI_attributes = {
   .name = "UI",
@@ -105,35 +105,35 @@ const osThreadAttr_t control_attributes = {
 osThreadId_t task1Handle;
 const osThreadAttr_t task1_attributes = {
   .name = "task1",
-  .stack_size = 256 * 4,
+  .stack_size = 512 * 4,
   .priority = (osPriority_t) osPriorityHigh3,
 };
 /* Definitions for task4 */
 osThreadId_t task4Handle;
 const osThreadAttr_t task4_attributes = {
   .name = "task4",
-  .stack_size = 256 * 4,
+  .stack_size = 512 * 4,
   .priority = (osPriority_t) osPriorityHigh3,
 };
 /* Definitions for task5 */
 osThreadId_t task5Handle;
 const osThreadAttr_t task5_attributes = {
   .name = "task5",
-  .stack_size = 256 * 4,
+  .stack_size = 512 * 4,
   .priority = (osPriority_t) osPriorityHigh3,
 };
 /* Definitions for task7 */
 osThreadId_t task7Handle;
 const osThreadAttr_t task7_attributes = {
   .name = "task7",
-  .stack_size = 256 * 4,
+  .stack_size = 512 * 4,
   .priority = (osPriority_t) osPriorityHigh3,
 };
 /* Definitions for task8 */
 osThreadId_t task8Handle;
 const osThreadAttr_t task8_attributes = {
   .name = "task8",
-  .stack_size = 256 * 4,
+  .stack_size = 512 * 4,
   .priority = (osPriority_t) osPriorityHigh3,
 };
 
@@ -577,7 +577,7 @@ void Task8(void *argument)
   int count = 0;
   uint32_t fail_tick = tick;
   /* Infinite loop */
-  while (tick - invalid_tick < 50000)
+  while (tick - invalid_tick < 500000)
   {
     if (fabs(angle_top) > 30) {
       invalid_tick = tick;
