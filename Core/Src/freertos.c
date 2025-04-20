@@ -206,7 +206,7 @@ void MX_FREERTOS_Init(void) {
   // task7Handle = osThreadNew(Task7, NULL, &task7_attributes);
 
   /* creation of task8 */
-  task8Handle = osThreadNew(Task8, NULL, &task8_attributes);
+  // task8Handle = osThreadNew(Task8, NULL, &task8_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -377,12 +377,12 @@ void Task4(void *argument)
   task_running = 1;
   deadzone = 600;
   PID_Base yawpid = PID_Base_Init(-500,-0,-200,5000,-5000,0,0.5);
-  PID_Base adcpid = PID_Base_Init(-0.03f,-0.02f,-0.15f,50,-50,0,0.5);
+  PID_Base adcpid = PID_Base_Init(-0.03f,-0.02f,-0.40f,50,-50,1,0.5);
   uint32_t tick = osKernelGetTickCount();
   uint32_t invalid_tick = tick;
   float last_angle_yaw = 0;
   /* Infinite loop */
-  while (tick - invalid_tick < 12000)
+  while (tick - invalid_tick < 120000)
   {
     float angle_setpoint;
     if (fabs(angle_top) > 30) {
@@ -428,7 +428,7 @@ void Task5(void *argument)
   task_running = 1;
   deadzone = 600;
   PID_Base yawpid = PID_Base_Init(-500,-0,-200,5000,-5000,0,0.5);
-  PID_Base adcpid = PID_Base_Init(-0.03f,-0.02f,-0.15f,50,-50,0,0.5);
+  PID_Base adcpid = PID_Base_Init(-0.03f,-0.02f,-0.40f,50,-50,1,0.5);
   uint32_t tick = osKernelGetTickCount();
   uint32_t invalid_tick = tick;
   float last_angle_yaw = 0;
@@ -500,8 +500,8 @@ void Task7(void *argument)
   /* USER CODE BEGIN Task7 */
   task_running = 1;
   deadzone = 600;
-  PID_Base yawpid = PID_Base_Init(-500,-0,-200,5000,-5000,0,0.5);
-  PID_Base adcpid = PID_Base_Init(-0.03f,-0.02f,-0.15f,50,-50,0,0.5);
+  PID_Base yawpid = PID_Base_Init(-2,-0,-40,5000,-5000,0,0.5);
+  PID_Base adcpid = PID_Base_Init(-30,-1,-100,5000,-5000,0,0.25);
   uint32_t tick = osKernelGetTickCount();
   uint32_t invalid_tick = tick;
   float last_angle_yaw = 0;
@@ -517,14 +517,14 @@ void Task7(void *argument)
     }
     float diff = angle_yaw - last_angle_yaw;
     last_angle_yaw = angle_yaw;
-    adc_pidout = PID_Base_Calc(&adcpid, adc_use, 2060 - diff * 10 - angle_yaw);
-    yaw_pidout = PID_Base_Calc(&yawpid, speed  ,-adc_pidout);
-    if (yaw_pidout > 0)yaw_pidout += deadzone;
-    if (yaw_pidout < 0)yaw_pidout -= deadzone;
+    yaw_pidout = PID_Base_Calc(&yawpid, angle_yaw  ,0);
+    adc_pidout = PID_Base_Calc(&adcpid, adc_use, 2060 - yaw_pidout);
+    if (adc_pidout > 0)adc_pidout += deadzone;
+    if (adc_pidout < 0)adc_pidout -= deadzone;
     if (fabs(angle_top) > 30) {
       whell_set_speed(&motor, 0);
     } else {
-      whell_set_speed(&motor, (int)yaw_pidout);
+      whell_set_speed(&motor, (int)adc_pidout);
     }
     tick += 10;
     osDelayUntil(tick);
@@ -534,17 +534,17 @@ void Task7(void *argument)
   invalid_tick = tick;
   while (tick - invalid_tick < 50000)
   {
-    if (target_angle < 330) target_angle += 0.5f;
+    if (target_angle < 360) target_angle += 0.3f;
     float diff = angle_yaw - last_angle_yaw;
     last_angle_yaw = angle_yaw;
-    adc_pidout = PID_Base_Calc(&adcpid, adc_use, 2060 - diff * 10 - angle_yaw + target_angle);
-    yaw_pidout = PID_Base_Calc(&yawpid, speed  ,-adc_pidout);
-    if (yaw_pidout > 0)yaw_pidout += deadzone;
-    if (yaw_pidout < 0)yaw_pidout -= deadzone;
+    yaw_pidout = PID_Base_Calc(&yawpid, angle_yaw  , target_angle);
+    adc_pidout = PID_Base_Calc(&adcpid, adc_use, 2060 - yaw_pidout);
+    if (adc_pidout > 0)adc_pidout += deadzone;
+    if (adc_pidout < 0)adc_pidout -= deadzone;
     if (fabs(angle_top) > 30) {
       whell_set_speed(&motor, 0);
     } else {
-      whell_set_speed(&motor, (int)yaw_pidout);
+      whell_set_speed(&motor, (int)adc_pidout);
     }
     tick += 10;
     osDelayUntil(tick);
@@ -567,8 +567,8 @@ void Task8(void *argument)
   /* USER CODE BEGIN Task8 */
   task_running = 1;
   deadzone = 600;
-  PID_Base yawpid = PID_Base_Init(-500,-0,-200,5000,-5000,0,0.5);
-  PID_Base adcpid = PID_Base_Init(-0.03f,-0.02f,-0.15f,50,-50,0,0.5);
+  PID_Base yawpid = PID_Base_Init(-2,-0,-40,5000,-5000,0,0.5);
+  PID_Base adcpid = PID_Base_Init(-30,-1,-100,5000,-5000,0,0.25);
   uint32_t tick = osKernelGetTickCount();
   uint32_t invalid_tick = tick;
   float last_angle_yaw = 0;
@@ -588,14 +588,14 @@ void Task8(void *argument)
     samples[139] = angle_yaw;
     float diff = angle_yaw - last_angle_yaw;
     last_angle_yaw = angle_yaw;
-    adc_pidout = PID_Base_Calc(&adcpid, adc_use, 2060 - diff * 10 - angle_yaw);
-    yaw_pidout = PID_Base_Calc(&yawpid, speed  ,-adc_pidout);
-    if (yaw_pidout > 0)yaw_pidout += deadzone;
-    if (yaw_pidout < 0)yaw_pidout -= deadzone;
+    yaw_pidout = PID_Base_Calc(&yawpid, angle_yaw  ,0);
+    adc_pidout = PID_Base_Calc(&adcpid, adc_use, 2060 - yaw_pidout);
+    if (adc_pidout > 0)adc_pidout += deadzone;
+    if (adc_pidout < 0)adc_pidout -= deadzone;
     if (fabs(angle_top) > 30) {
       whell_set_speed(&motor, 0);
     } else {
-      whell_set_speed(&motor, (int)yaw_pidout);
+      whell_set_speed(&motor, (int)adc_pidout);
     }
     tick += 10;
     osDelayUntil(tick);

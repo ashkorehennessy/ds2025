@@ -19,6 +19,6 @@ float deadzone = 1000;
 Whell motor;
 float target_angle_yaw = 0;
 int task_running = 0;
-int task_index = 8;
+int task_index = 7;
 float samples[140] = {0};
 float offset;

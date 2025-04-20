@@ -30,8 +30,6 @@ float PID_Base_Calc(PID_Base *pid, float input_value, float setpoint) {
     pid->last_error = error;
     float output = pid->Kp * error + pid->Ki * pid->integral + pid->Kd * derivative;
 
-    // Integral decay
-    pid->integral *= 0.90f;
 
     // Integral limit
     if(pid->integral > pid->outmax){
@@ -49,7 +47,9 @@ float PID_Base_Calc(PID_Base *pid, float input_value, float setpoint) {
 
     // Low pass filter
     if(pid->use_lowpass_filter){
-        output = pid->last_out * pid->lowpass_filter_factor + output * (1 - pid->lowpass_filter_factor);
+        // Integral decay
+        pid->integral *= 0.90f;
+        // output = pid->last_out * pid->lowpass_filter_factor + output * (1 - pid->lowpass_filter_factor);
     }
 
     pid->last_out = output;
