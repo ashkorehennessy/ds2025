@@ -87,7 +87,7 @@ const osThreadAttr_t UI_attributes = {
   .cb_size = sizeof(UIControlBlock),
   .stack_mem = &UIBuffer[0],
   .stack_size = sizeof(UIBuffer),
-  .priority = (osPriority_t) osPriorityLow4,
+  .priority = (osPriority_t) osPriorityBelowNormal5,
 };
 /* Definitions for control */
 osThreadId_t controlHandle;
@@ -136,6 +136,25 @@ const osThreadAttr_t task8_attributes = {
   .stack_size = 512 * 4,
   .priority = (osPriority_t) osPriorityHigh3,
 };
+/* Definitions for task9 */
+osThreadId_t task9Handle;
+const osThreadAttr_t task9_attributes = {
+  .name = "task9",
+  .stack_size = 512 * 4,
+  .priority = (osPriority_t) osPriorityHigh3,
+};
+/* Definitions for adcpush */
+osThreadId_t adcpushHandle;
+uint32_t adcpushBuffer[ 128 ];
+osStaticThreadDef_t adcpushControlBlock;
+const osThreadAttr_t adcpush_attributes = {
+  .name = "adcpush",
+  .cb_mem = &adcpushControlBlock,
+  .cb_size = sizeof(adcpushControlBlock),
+  .stack_mem = &adcpushBuffer[0],
+  .stack_size = sizeof(adcpushBuffer),
+  .priority = (osPriority_t) osPriorityLow2,
+};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -151,6 +170,8 @@ void Task4(void *argument);
 void Task5(void *argument);
 void Task7(void *argument);
 void Task8(void *argument);
+void Task9(void *argument);
+void adcPush(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -207,6 +228,12 @@ void MX_FREERTOS_Init(void) {
   //
   // /* creation of task8 */
   // task8Handle = osThreadNew(Task8, NULL, &task8_attributes);
+  //
+  // /* creation of task9 */
+  // task9Handle = osThreadNew(Task9, NULL, &task9_attributes);
+
+  /* creation of adcpush */
+  adcpushHandle = osThreadNew(adcPush, NULL, &adcpush_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -274,6 +301,8 @@ void angleTask(void *argument)
     } else {
       angle_top = -(angle_adc + 180);
     }
+    if (angle_top>0)angle_show = 180-angle_top;
+    else angle_show = -(180+angle_top);
     osDelay(1);
   }
   /* USER CODE END angleTask */
@@ -494,7 +523,7 @@ void Task7(void *argument)
   /* USER CODE BEGIN Task7 */
   task_running = 1;
   deadzone = 600;
-  PID_Base yawpid = PID_Base_Init(-1.7,-0,-40,5000,-5000,0,0.5);
+  PID_Base yawpid = PID_Base_Init(-1.8,-0,-40,5000,-5000,0,0.5);
   PID_Base adcpid = PID_Base_Init(-30,-1,-100,5000,-5000,0,0.25);
   uint32_t tick = osKernelGetTickCount();
   uint32_t invalid_tick = tick;
@@ -556,7 +585,7 @@ void Task8(void *argument)
   /* USER CODE BEGIN Task8 */
   task_running = 1;
   deadzone = 600;
-  PID_Base yawpid = PID_Base_Init(-1.7,-0,-40,5000,-5000,0,0.5);
+  PID_Base yawpid = PID_Base_Init(-2.5,-0,-40,5000,-5000,0,0.5);
   PID_Base adcpid = PID_Base_Init(-30,-1,-100,5000,-5000,0,0.25);
   uint32_t tick = osKernelGetTickCount();
   uint32_t invalid_tick = tick;
@@ -568,12 +597,12 @@ void Task8(void *argument)
   while (tick - invalid_tick < 500000)
   {
     if (turn_flag == 0) {
-      target_angle += 0.3f;
+      target_angle += 0.2f;
       if (target_angle > angle_turn_limit) {
         turn_flag = 1;
       }
     } else {
-      target_angle -= 0.3f;
+      target_angle -= 0.2f;
       if (target_angle < -angle_turn_limit) {
         turn_flag = 0;
       }
@@ -606,6 +635,125 @@ void Task8(void *argument)
   /* USER CODE END Task8 */
 }
 
+/* USER CODE BEGIN Header_Task9 */
+/**
+* @brief Function implementing the task9 thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_Task9 */
+void Task9(void *argument)
+{
+  /* USER CODE BEGIN Task9 */
+  task_running = 1;
+  deadzone = 600;
+  PID_Base yawpid = PID_Base_Init(-500,-0,-200,5000,-5000,0,0.5);
+  PID_Base adcpid = PID_Base_Init(-0.03f,-0.02f,-0.40f,50,-50,1,0.5);
+  uint32_t tick = osKernelGetTickCount();
+  uint32_t invalid_tick = tick;
+  float last_angle_yaw = 0;
+  int direction = 1;
+  int count = 0;
+  uint32_t fail_tick = tick;
+  /* Infinite loop */
+  while (tick - invalid_tick < 8000)
+  {
+    if (fabs(angle_top) > dead_angle) {
+      invalid_tick = tick;
+      if (direction == 1) {
+        whell_set_speed(&motor, 3100);
+        count++;
+        if (count > 100) {
+          count = 0;
+          direction = 0;
+        }
+      } else {
+        whell_set_speed(&motor, -3100);
+        count++;
+        if (count > 100) {
+          count = 0;
+          direction = 1;
+        }
+      }
+      osDelay(4);
+      if (osKernelGetTickCount() - fail_tick > 3000) {
+        whell_set_speed(&motor, 0);
+        osDelay(5000);
+        angle_yaw = 0;
+        fail_tick = osKernelGetTickCount();
+      }
+      continue;
+    }
+    if (tick - invalid_tick > 1000) {
+      fail_tick = osKernelGetTickCount();
+    }
+    float diff = angle_yaw - last_angle_yaw;
+    last_angle_yaw = angle_yaw;
+    adc_pidout = PID_Base_Calc(&adcpid, adc_use, adc_mid - diff * 10 - angle_yaw);
+    yaw_pidout = PID_Base_Calc(&yawpid, speed  ,-adc_pidout);
+    if (yaw_pidout > 0)yaw_pidout += deadzone;
+    if (yaw_pidout < 0)yaw_pidout -= deadzone;
+    if (fabs(angle_top) > dead_angle) {
+      whell_set_speed(&motor, 0);
+    } else {
+      whell_set_speed(&motor, (int)yaw_pidout);
+    }
+    tick += 10;
+    osDelayUntil(tick);
+  }
+  float target_angle = 0;
+  tick = osKernelGetTickCount();
+  invalid_tick = tick;
+  PID_Base_clear(&yawpid);
+  PID_Base_clear(&adcpid);
+  yawpid = PID_Base_Init(-1.5,-0,-40,5000,-5000,0,0.5);
+  adcpid = PID_Base_Init(-30,-1,-100,5000,-5000,0,0.25);
+  tick = osKernelGetTickCount();
+  invalid_tick = tick;
+  while (tick - invalid_tick < 50000)
+  {
+    if (target_angle < 360) target_angle += 0.3f;
+    last_angle_yaw = angle_yaw;
+    yaw_pidout = PID_Base_Calc(&yawpid, angle_yaw  , target_angle);
+    adc_pidout = PID_Base_Calc(&adcpid, adc_use, adc_mid - yaw_pidout);
+    if (adc_pidout > 0)adc_pidout += deadzone;
+    if (adc_pidout < 0)adc_pidout -= deadzone;
+    if (fabs(angle_top) > dead_angle) {
+      whell_set_speed(&motor, 0);
+    } else {
+      whell_set_speed(&motor, (int)adc_pidout);
+    }
+    tick += 10;
+    osDelayUntil(tick);
+  }
+  whell_set_speed(&motor, 0);
+  task_running = 0;
+  osThreadExit();
+  /* USER CODE END Task9 */
+}
+
+/* USER CODE BEGIN Header_adcPush */
+/**
+* @brief Function implementing the adcpush thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_adcPush */
+void adcPush(void *argument)
+{
+  /* USER CODE BEGIN adcPush */
+  /* Infinite loop */
+  for(;;)
+  {
+    for (int i=0;i<139;i++) {
+      samples_adc[i] = samples_adc[i+1];
+    }
+    samples_adc[139] = angle_top;
+    osDelay(10);
+  }
+  /* USER CODE END adcPush */
+}
+
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
 void start_task(int index)
@@ -617,6 +765,7 @@ void start_task(int index)
   case 6: task5Handle = osThreadNew(Task5, NULL, &task5_attributes);break;
   case 7: task7Handle = osThreadNew(Task7, NULL, &task7_attributes);break;
   case 8: task8Handle = osThreadNew(Task8, NULL, &task8_attributes);break;
+  case 9: task9Handle = osThreadNew(Task9, NULL, &task9_attributes);break;
   }
 }
 /* USER CODE END Application */

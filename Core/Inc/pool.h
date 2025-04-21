@@ -27,6 +27,8 @@ extern int task_index;
 extern float offset;
 extern float angle_turn_limit;
 extern float samples[140];
+extern float samples_adc[140];
 extern float adc_mid;
 extern float dead_angle;
+extern float angle_show;
 #endif //POOL_H

@@ -176,21 +176,22 @@ void UI_init(){
     UI_item_init(&items[1][2], "targe", FLOAT, &target_angle_yaw);
     UI_item_init(&items[1][3], "Speed", FLOAT, &speed);
     UI_item_init(&items[1][5], "Angle", FLOAT, &angle_yaw);
-    UI_item_init(&items[1][5], "index", INT32, &task_index);
     UI_item_init(&items[2][0], "index", INT32, &task_index);
     UI_item_init(&items[2][1], "run  ", INT32, &task_running);
     UI_item_init(&items[2][5], "Angle", FLOAT, &angle_top);
     UI_item_init(&items[3][0], "index", INT32, &task_index);
     UI_item_init(&items[3][1], "run  ", INT32, &task_running);
-    UI_item_init(&items[3][5], "Angle", FLOAT, &angle_top);
+    UI_item_init(&items[3][5], "Angle", FLOAT, &angle_show);
     UI_item_init(&items[4][0], "index", INT32, &task_index);
     UI_item_init(&items[4][1], "run  ", INT32, &task_running);
     UI_item_init(&items[4][2], "Speed", FLOAT, &speed);
     UI_item_init(&items[4][3], "ywout", FLOAT, &yaw_pidout);
     UI_item_init(&items[4][4], "run  ", INT32, &task_running);
     UI_item_init(&items[4][5], "off  ", FLOAT, &offset);
-    UI_item_init(&items[6][0], "limit", FLOAT, &angle_turn_limit);
-    UI_item_init(&items[6][1], "ywAng", FLOAT, &angle_yaw);
+    UI_item_init(&items[5][0], "limit", FLOAT, &angle_turn_limit);
+    UI_item_init(&items[5][1], "ywAng", FLOAT, &angle_yaw);
+    UI_item_init(&items[5][2], "index", INT32, &task_index);
+
 
 
 }
@@ -224,6 +225,24 @@ void UI_show(){
             ST7735_WriteString(0,74," 30",Font_7x10,ST7735_YELLOW,ST7735_BLACK);
             ST7735_WriteString(0,92," 60",Font_7x10,ST7735_YELLOW,ST7735_BLACK);
             ST7735_WriteString(0,110," 90",Font_7x10,ST7735_YELLOW,ST7735_BLACK);
+            UI_show_custom_part();
+            return;
+        }
+        if (dip_switch == 6) {
+            // draw timeline to x-axis
+            ST7735_WriteString(10,120,"1500",Font_7x10,ST7735_YELLOW,ST7735_BLACK);
+            ST7735_WriteString(40,120,"1125",Font_7x10,ST7735_YELLOW,ST7735_BLACK);
+            ST7735_WriteString(70,120," 750",Font_7x10,ST7735_YELLOW,ST7735_BLACK);
+            ST7735_WriteString(100,120," 375",Font_7x10,ST7735_YELLOW,ST7735_BLACK);
+            ST7735_WriteString(130,120,"   0",Font_7x10,ST7735_YELLOW,ST7735_BLACK);
+            // draw angle line to y-axis
+            ST7735_WriteString(0,0,"-180",Font_7x10,ST7735_YELLOW,ST7735_BLACK);
+            ST7735_WriteString(0,18,"-120",Font_7x10,ST7735_YELLOW,ST7735_BLACK);
+            ST7735_WriteString(0,36,"-60",Font_7x10,ST7735_YELLOW,ST7735_BLACK);
+            ST7735_WriteString(0,55,"  0",Font_7x10,ST7735_YELLOW,ST7735_BLACK);
+            ST7735_WriteString(0,74," 60",Font_7x10,ST7735_YELLOW,ST7735_BLACK);
+            ST7735_WriteString(0,92,"120",Font_7x10,ST7735_YELLOW,ST7735_BLACK);
+            ST7735_WriteString(0,110,"180",Font_7x10,ST7735_YELLOW,ST7735_BLACK);
             UI_show_custom_part();
             return;
         }
@@ -263,6 +282,19 @@ void UI_show(){
 
 void UI_show_custom_part(){
     switch (DIP_SWITCH) {
+    case 6:
+        ST7735_FillRectangleFast(30,0,150,120,ST7735_BLACK);
+        // draw samples
+        for (int i=0;i<140;i++) {
+            int x=i+30;
+            int y=(samples_adc[i]/3)+60;
+            if (y < 1)y = 1;
+            if (y > 119)y = 119;
+            if (x > 0 && x < 160 && y > 0 && y < 128) {
+                ST7735_DrawPixel(x, y, ST7735_WHITE);
+            }
+        }
+        break;
     case 7:
         ST7735_FillRectangleFast(30,0,150,120,ST7735_BLACK);
         // draw samples
