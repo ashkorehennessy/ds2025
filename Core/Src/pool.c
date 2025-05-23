@@ -5,9 +5,7 @@
 
 
 uint8_t buf[128];
-axises gyro;
-axises accel;
-
+MPU6050_t mpu6050;
 TF_Luna_Lidar TF_Luna_1;
 
 int16_t  tfDist = 0 ;   // distance in centimeters

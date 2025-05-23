@@ -19,7 +19,6 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "i2c.h"
-#include "spi.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
@@ -28,8 +27,7 @@
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include <string.h>
-
-#include "icm20948.h"
+#include "mpu6050.h"
 #include "pool.h"
 #include "tfluna_i2c.h"
 /* USER CODE END Includes */
@@ -95,26 +93,27 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_SPI1_Init();
   MX_TIM2_Init();
   MX_USART1_UART_Init();
-  MX_TIM4_Init();
   MX_I2C1_Init();
+  MX_I2C2_Init();
+  MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-  sprintf(buf,"init\n");
-  HAL_UART_Transmit(&huart1, (uint8_t*) buf, strlen(buf), 1000);
-  TF_Luna_init(&TF_Luna_1, &hi2c1, 0x10);
+  MPU6050_Init(&hi2c1);
   HAL_Delay(10);
+  HAL_TIM_Base_Start_IT(&htim2);
+  sprintf(buf,"init\n");
+  HAL_UART_Transmit(&huart1, (uint8_t *)buf, sizeof(buf), 1000);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-
-    getData(&TF_Luna_1, &tfDist, &tfFlux, &tfTemp);
-    sprintf(buf,"dist:%d,%d,%d\n", tfDist, tfFlux, tfTemp);
-    HAL_UART_Transmit(&huart1, (uint8_t*) buf, strlen(buf), 1000);
+    memset(buf, 0, sizeof(buf));
+    sprintf(buf,"Angle:%f,%f,%f\n", mpu6050.KalmanAngleX, mpu6050.KalmanAngleY, mpu6050.AngleZ);
+    HAL_UART_Transmit(&huart1, (uint8_t*) buf, sizeof(buf), 1000);
+    HAL_Delay(10);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
