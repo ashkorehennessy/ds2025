@@ -6,10 +6,7 @@
 
 uint8_t buf[128];
 MPU6050_t mpu6050;
-TF_Luna_Lidar TF_Luna_1;
-int16_t  tfDist = 0;
-int16_t  tfFlux = 0;
-int16_t  tfTemp = 0;
+float  tfDist = 0;
 int led_count = 0;
 float angle_mix = 0;
 float angle_sample[SAMPLE_SIZE];
@@ -23,7 +20,9 @@ uint8_t uart1_rx_byte;                 // 当前接收的字节
 char uart1_rx_buf[UART_RX_BUF_SIZE];   // 接收缓冲区
 volatile uint16_t uart1_rx_index = 0;  // 当前缓冲区索引
 volatile uint8_t uart1_rx_done = 0;    // 接收完成标志
-
+VL53L0X_RangingMeasurementData_t RangingData;
+VL53L0X_Dev_t  vl53l0x_c; // center module
+VL53L0X_DEV    Dev = &vl53l0x_c;
 void angle_sample_push(float angle){
   for (int i = SAMPLE_SIZE - 1; i > 0; i--) {
     angle_sample[i] = angle_sample[i - 1];
@@ -86,19 +85,19 @@ void detect_peaks_and_valleys() {
   float b4 = angle_sample[8];
 
   // 检测极小值（最低点）
-  if (task_index == 2 && b2<5 && led_count <= 0 &&
+  if (task_index == 2 && b2<5 && led_count <= 200 &&
     b0 > b1 && b1 > b2 && b2 < b3 && b3 < b4) {
-    led_count = 100;
-    task2_result = 54 - tfDist;
+    led_count = 300;
+    task2_result = 64 - tfDist;
     return;
   }
 
   // 检测极大值（最高点）
   static uint32_t last_time = 0;
   static int period_flag = 0;
-  if (task_index == 3 && b2>5 && led_count <= 0 &&
+  if (task_index == 3 && b2>5 && led_count <= 200 &&
     b0 < b1 && b1 < b2 && b2 > b3 && b3 > b4) {
-    led_count = 100;
+    led_count = 260;
     // 两次最高点为一个周期
     if (period_flag == 0) {
       period_flag = 1;

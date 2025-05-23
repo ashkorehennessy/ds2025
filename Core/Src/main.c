@@ -19,7 +19,6 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "i2c.h"
-#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -89,7 +88,6 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_TIM2_Init();
   MX_USART1_UART_Init();
   MX_I2C1_Init();
   MX_I2C2_Init();
@@ -99,23 +97,78 @@ int main(void)
   MPU6050_Init(&hi2c2);
   HAL_Delay(10);
   mprintf("init\n");
-  TF_Luna_init(&TF_Luna_1, &hi2c1, 0x10);
-  HAL_TIM_Base_Start_IT(&htim2);
+  uint32_t refSpadCount;
+  uint8_t isApertureSpads;
+  uint8_t VhvSettings;
+  uint8_t PhaseCal;
+  Dev->I2cHandle = &hi2c1;
+  Dev->I2cDevAddr = 0x52;
+  VL53L0X_WaitDeviceBooted( Dev );
+  VL53L0X_DataInit( Dev );
+  VL53L0X_StaticInit( Dev );
+  VL53L0X_PerformRefCalibration(Dev, &VhvSettings, &PhaseCal);
+  VL53L0X_PerformRefSpadManagement(Dev, &refSpadCount, &isApertureSpads);
+  VL53L0X_SetDeviceMode(Dev, VL53L0X_DEVICEMODE_SINGLE_RANGING);
+
+  // Enable/Disable Sigma and Signal check
+  VL53L0X_SetLimitCheckEnable(Dev, VL53L0X_CHECKENABLE_SIGMA_FINAL_RANGE, 1);
+  VL53L0X_SetLimitCheckEnable(Dev, VL53L0X_CHECKENABLE_SIGNAL_RATE_FINAL_RANGE, 1);
+  VL53L0X_SetLimitCheckValue(Dev, VL53L0X_CHECKENABLE_SIGNAL_RATE_FINAL_RANGE, (FixPoint1616_t)(0.1*65536));
+  VL53L0X_SetLimitCheckValue(Dev, VL53L0X_CHECKENABLE_SIGMA_FINAL_RANGE, (FixPoint1616_t)(60*65536));
+  VL53L0X_SetMeasurementTimingBudgetMicroSeconds(Dev, 20000);
+  VL53L0X_SetVcselPulsePeriod(Dev, VL53L0X_VCSEL_PERIOD_PRE_RANGE, 18);
+  VL53L0X_SetVcselPulsePeriod(Dev, VL53L0X_VCSEL_PERIOD_FINAL_RANGE, 14);
+  mprintf("init done\n");
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    // mprintf("%.2f\n", angle_mix);
-//    mprintf("tfDist:%d,tfFlux:%d,tfTemp:%d\r\n", tfDist, tfFlux, tfTemp);
-
-    if (uart1_rx_done)
-    {
-      process_uart1_buffer();
+    MPU6050_Read_All(&hi2c2,&mpu6050);
+    VL53L0X_PerformSingleRangingMeasurement(Dev, &RangingData);
+    if(RangingData.RangeStatus == 0) {
+      tfDist = RangingData.RangeMilliMeter / 10.0f;
     }
+
+    // mprintf(":%.2f,%.2f\n", angle_mix,tfDist);
+//    mprintf("tfDist:%f);
+
     HAL_GPIO_TogglePin(GPIOC,GPIO_PIN_13);
-    HAL_Delay(20);
+
+    if(led_count > 0) {
+      led_count -= 10;
+      if (led_count < 50){
+        HAL_GPIO_WritePin(GPIOB,GPIO_PIN_4,GPIO_PIN_SET);
+      } else {
+        HAL_GPIO_WritePin(GPIOB,GPIO_PIN_4,GPIO_PIN_RESET);
+      }
+    } else{
+      HAL_GPIO_WritePin(GPIOB,GPIO_PIN_4,GPIO_PIN_RESET);
+    }
+    angle_mix = sqrt(pow(mpu6050.KalmanAngleX,2) + pow(mpu6050.KalmanAngleY,2));
+    angle_sample_push(angle_mix);
+    detect_peaks_and_valleys();
+    switch(task_index){
+      case 1:
+        task1_count++;
+        if (task1_count > 200){
+          task1_count = 0;
+          mprintf("系统开机\n");
+        }
+        break;
+      case 2:
+        if (task2_result != -1) {
+          mprintf("长度l:%.2f\n", task2_result);
+          task2_result = -1;
+        }
+        break;
+      case 3:
+        if (task3_result != -1) {
+          mprintf("周期T:%.2fs\n", task3_result);
+          task3_result = -1;
+        }
+    }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -187,11 +240,37 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
       uart1_rx_index = 0;  // 溢出保护，清空
     }
 
+    if (uart1_rx_done)
+    {
+      process_uart1_buffer();
+    }
     // 继续接收下一个字节
     HAL_UART_Receive_IT(&huart1, &uart1_rx_byte, 1);
   }
 }
 /* USER CODE END 4 */
+
+/**
+  * @brief  Period elapsed callback in non blocking mode
+  * @note   This function is called  when TIM2 interrupt took place, inside
+  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
+  * a global variable "uwTick" used as application time base.
+  * @param  htim : TIM handle
+  * @retval None
+  */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  /* USER CODE BEGIN Callback 0 */
+
+  /* USER CODE END Callback 0 */
+  if (htim->Instance == TIM2)
+  {
+    HAL_IncTick();
+  }
+  /* USER CODE BEGIN Callback 1 */
+
+  /* USER CODE END Callback 1 */
+}
 
 /**
   * @brief  This function is executed in case of error occurrence.

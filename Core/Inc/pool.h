@@ -6,12 +6,15 @@
 #define POOL_H
 #include <stdint.h>
 #include "mpu6050.h"
-#include "tfluna_i2c.h"
 #include <stdlib.h>
 #include "string.h"
 #include "stdio.h"
 #include "usart.h"
 #include "tgmath.h"
+
+#include "vl53l0x_api.h"
+
+
 #define mprintf(fmt, ...)                   \
     do {                                    \
         memset(buf,0,sizeof(buf));           \
@@ -21,13 +24,14 @@
 #define UART_RX_BUF_SIZE 128
 #define UART_RX_END_CHAR '\n'
 #define SAMPLE_SIZE 200
+
+extern VL53L0X_RangingMeasurementData_t RangingData;
+extern VL53L0X_Dev_t  vl53l0x_c; // center module
+extern VL53L0X_DEV    Dev;
 extern uint8_t buf[128];
-extern TF_Luna_Lidar TF_Luna_1;
 extern int led_count;
 extern MPU6050_t mpu6050;
-extern int16_t  tfDist;
-extern int16_t  tfFlux;
-extern int16_t  tfTemp;
+extern float  tfDist;
 extern float angle_mix;
 extern float angle_sample[200];
 extern int task_index;
