@@ -5,30 +5,14 @@
 #ifndef POOL_H
 #define POOL_H
 #include <stdint.h>
-#include "wheel.h"
-void start_task(int index);
-extern float angle_adc;
-extern float angle_top;
-extern float angle_yaw;
-extern float speed;
-extern int speed_setpoint;
-extern float angle_offset;
-extern float alpha;
-extern float adc_pidout;
-extern float yaw_pidout;
-extern float nav_pidout;
-extern float deadzone;
-extern uint32_t adc_raw;
-extern float adc_use;
-extern Whell motor;
-extern float target_angle_yaw;
-extern int task_running;
-extern int task_index;
-extern float offset;
-extern float angle_turn_limit;
-extern float samples[140];
-extern float samples_adc[140];
-extern float adc_mid;
-extern float dead_angle;
-extern float angle_show;
+#include "icm20948.h"
+
+#include "tfluna_i2c.h"
+extern uint8_t buf[128];
+extern axises gyro;
+extern axises accel;
+extern TF_Luna_Lidar TF_Luna_1;
+extern int16_t  tfDist;
+extern int16_t  tfFlux;
+extern int16_t  tfTemp;
 #endif //POOL_H
