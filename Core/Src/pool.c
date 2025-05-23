@@ -15,8 +15,9 @@ float angle_mix = 0;
 float angle_sample[SAMPLE_SIZE];
 int task_index = 0;
 int task1_count = 0;
-float task2_result = 0;
+float task2_result = -1;
 int task2_fool = 0;
+float task3_result = -1;
 float task5_result = 0;
 uint8_t uart1_rx_byte;                 // 当前接收的字节
 char uart1_rx_buf[UART_RX_BUF_SIZE];   // 接收缓冲区
@@ -78,23 +79,42 @@ void process_uart1_buffer(void)
   uart1_rx_done = 0;
 }
 void detect_peaks_and_valleys() {
-    float b0 = angle_sample[0];
-    float b1 = angle_sample[2];
-    float b2 = angle_sample[4];
-    float b3 = angle_sample[6];
-    float b4 = angle_sample[8];
+  float b0 = angle_sample[0];
+  float b1 = angle_sample[2];
+  float b2 = angle_sample[4];
+  float b3 = angle_sample[6];
+  float b4 = angle_sample[8];
 
-    // 检测极大值（最高点）
-    if (task_index == 3 && b2>5 && b0 < b1 && b1 < b2 && b2 > b3 && b3 > b4) {
-      led_count = 100;
-      return;
+  // 检测极小值（最低点）
+  if (task_index == 2 && b2<5 && led_count <= 0 &&
+    b0 > b1 && b1 > b2 && b2 < b3 && b3 < b4) {
+    led_count = 100;
+    task2_result = 54 - tfDist;
+    return;
+  }
+
+  // 检测极大值（最高点）
+  static uint32_t last_time = 0;
+  static int period_flag = 0;
+  if (task_index == 3 && b2>5 && led_count <= 0 &&
+    b0 < b1 && b1 < b2 && b2 > b3 && b3 > b4) {
+    led_count = 100;
+    // 两次最高点为一个周期
+    if (period_flag == 0) {
+      period_flag = 1;
+    } else {
+      period_flag = 0;
+      // 计算周期
+      uint32_t current_time = HAL_GetTick();
+      float period = (current_time - last_time) / 1000.0f; // 转换为秒
+      last_time = current_time;
+      if (period < 2) {
+        task3_result = period;
+      }
     }
 
-    // 检测极小值（最低点）
-    if (task_index == 2 && b2<5&&b0 > b1 && b1 > b2 && b2 < b3 && b3 < b4) {
-      led_count = 100;
-      task2_result = 70.5f - 11.5f - tfDist;
-      return;
-    }
+    return;
+  }
+
 
 }

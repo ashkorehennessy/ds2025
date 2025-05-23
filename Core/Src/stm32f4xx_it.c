@@ -222,17 +222,22 @@ void TIM2_IRQHandler(void)
   switch(task_index){
     case 1:
       task1_count++;
-      if (task1_count > 50){
+      if (task1_count > 200){
         task1_count = 0;
         mprintf("系统开机\n");
       }
       break;
     case 2:
       if (task2_result != -1) {
-        mprintf("l值:%.0f\n", task2_result);
+        mprintf("长度l:%.0f\n", task2_result);
         task2_result = -1;
       }
       break;
+    case 3:
+      if (task3_result != -1) {
+        mprintf("周期T:%.2fs\n", task3_result);
+        task3_result = -1;
+      }
 
 
   }

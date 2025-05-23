@@ -34,6 +34,7 @@ extern int task_index;
 extern int task1_count;
 extern float task2_result;
 extern int task2_fool;
+extern float task3_result;
 extern float task5_result;
 extern uint8_t uart1_rx_byte;                 // 当前接收的字节
 extern char uart1_rx_buf[UART_RX_BUF_SIZE];   // 接收缓冲区
