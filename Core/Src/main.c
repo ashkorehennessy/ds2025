@@ -25,11 +25,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <stdio.h>
-#include <string.h>
-#include "mpu6050.h"
 #include "pool.h"
-#include "tfluna_i2c.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -61,17 +57,7 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void process_uart1_buffer(void)
-{
-  for (uint16_t i = 0; i < uart1_rx_index; i++) {
-    if (uart1_rx_buf[i] >= 'a' && uart1_rx_buf[i] <= 'z') {
-      uart1_rx_buf[i] -= 32; // 转大写
-    }
-  }
-  HAL_UART_Transmit(&huart1, (uint8_t*)uart1_rx_buf, uart1_rx_index, 1000);
-  uart1_rx_index = 0;    // 清空索引
-  uart1_rx_done = 0;     // 清空标志
-}
+
 /* USER CODE END 0 */
 
 /**
@@ -112,8 +98,7 @@ int main(void)
   HAL_UART_Receive_IT(&huart1, &uart1_rx_byte, 1);
   MPU6050_Init(&hi2c2);
   HAL_Delay(10);
-  sprintf(buf,"init\n");
-  HAL_UART_Transmit(&huart1, (uint8_t *)buf, sizeof(buf), 1000);
+  mprintf("init\n");
   TF_Luna_init(&TF_Luna_1, &hi2c1, 0x10);
   HAL_TIM_Base_Start_IT(&htim2);
   /* USER CODE END 2 */
@@ -122,18 +107,15 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    memset(buf, 0, sizeof(buf));
-    sprintf(buf,"Angle:%f,%f,%f\n", mpu6050.KalmanAngleX, mpu6050.KalmanAngleY, mpu6050.AngleZ);
-    HAL_UART_Transmit(&huart1, (uint8_t*) buf, sizeof(buf), 1000);
-    memset(buf, 0, sizeof(buf));
+    mprintf("Angle:%f,%f,%f,%f\n", mpu6050.KalmanAngleX, mpu6050.KalmanAngleY, mpu6050.AngleZ,angle_mix);
+//    mprintf("tfDist:%d,tfFlux:%d,tfTemp:%d\r\n", tfDist, tfFlux, tfTemp);
 
-    // sprintf(buf,"tfDist:%d,tfFlux:%d,tfTemp:%d\r\n", tfDist, tfFlux, tfTemp);
-    // HAL_UART_Transmit(&huart1, (uint8_t*) buf, sizeof(buf), 1000);
     if (uart1_rx_done)
     {
       process_uart1_buffer();
     }
-    HAL_Delay(200);
+    HAL_GPIO_TogglePin(GPIOC,GPIO_PIN_13);
+    HAL_Delay(20);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

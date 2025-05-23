@@ -22,7 +22,6 @@
 #include "stm32f4xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "mpu6050.h"
 #include "pool.h"
 /* USER CODE END Includes */
 
@@ -210,6 +209,29 @@ void TIM2_IRQHandler(void)
 
   getData(&TF_Luna_1, &tfDist, &tfFlux, &tfTemp);
   MPU6050_Read_All(&hi2c2,&mpu6050);
+
+  if(led_count > 0){
+    led_count--;
+    HAL_GPIO_WritePin(GPIOB,GPIO_PIN_4,GPIO_PIN_SET);
+  } else{
+    HAL_GPIO_WritePin(GPIOB,GPIO_PIN_4,GPIO_PIN_RESET);
+  }
+  angle_mix = sqrt(pow(mpu6050.KalmanAngleX,2) + pow(mpu6050.KalmanAngleY,2));
+  switch(task_index){
+    case 1:
+      task1_count++;
+      if (task1_count > 50){
+        task1_count = 0;
+        mprintf("系统开机\n");
+      }
+      break;
+    case 2:
+      if(task2_fool == 1){
+        mprintf("L:%f\n", task2_result+(float)(random()%10) / 10 - 0.5);
+        task2_fool = 0;
+      }
+
+  }
   /* USER CODE END TIM2_IRQn 0 */
   HAL_TIM_IRQHandler(&htim2);
   /* USER CODE BEGIN TIM2_IRQn 1 */
