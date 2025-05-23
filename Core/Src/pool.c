@@ -6,19 +6,18 @@
 
 uint8_t buf[128];
 MPU6050_t mpu6050;
-TF_Luna_Lidar TF_Luna_1;
-int16_t  tfDist = 0;
-int16_t  tfFlux = 0;
-int16_t  tfTemp = 0;
+int tfDist = 0;
 int led_count = 0;
 float angle_mix = 0;
 float angle_sample[SAMPLE_SIZE];
+float alpha_sample[SAMPLE_SIZE];
 int task_index = 0;
-int task1_count = 0;
+int task1_count = 170;
 float task2_result = -1;
 int task2_fool = 0;
 float task3_result = -1;
-float task5_result = 0;
+float task4_result = -1;
+float task5_result = -1;
 uint8_t uart1_rx_byte;                 // 当前接收的字节
 char uart1_rx_buf[UART_RX_BUF_SIZE];   // 接收缓冲区
 volatile uint16_t uart1_rx_index = 0;  // 当前缓冲区索引
@@ -29,6 +28,21 @@ void angle_sample_push(float angle){
     angle_sample[i] = angle_sample[i - 1];
   }
   angle_sample[0] = angle;
+}
+
+void alpha_sample_push(float angle){
+  for (int i = SAMPLE_SIZE - 1; i > 0; i--) {
+    alpha_sample[i] = alpha_sample[i - 1];
+  }
+  alpha_sample[0] = angle;
+}
+
+float alpha_sample_avg(){
+  float sum = 0;
+  for (int i = 0; i < SAMPLE_SIZE; i++) {
+    sum += alpha_sample[i];
+  }
+  return sum / SAMPLE_SIZE;
 }
 
 void process_uart1_buffer(void)
@@ -89,32 +103,34 @@ void detect_peaks_and_valleys() {
   if (task_index == 2 && b2<5 && led_count <= 0 &&
     b0 > b1 && b1 > b2 && b2 < b3 && b3 < b4) {
     led_count = 100;
-    task2_result = 54 - tfDist;
+    task2_result = (float)(54 - tfDist) / 10.0f;
     return;
   }
 
   // 检测极大值（最高点）
   static uint32_t last_time = 0;
-  static int period_flag = 0;
   if (task_index == 3 && b2>5 && led_count <= 0 &&
     b0 < b1 && b1 < b2 && b2 > b3 && b3 > b4) {
     led_count = 100;
-    // 两次最高点为一个周期
-    if (period_flag == 0) {
-      period_flag = 1;
-    } else {
-      period_flag = 0;
-      // 计算周期
-      uint32_t current_time = HAL_GetTick();
-      float period = (current_time - last_time) / 1000.0f; // 转换为秒
-      last_time = current_time;
-      if (period < 2) {
-        task3_result = period;
-      }
+    uint32_t current_time = HAL_GetTick();
+    float period = (float)(current_time - last_time) / 1000.0f*2; // 转换为秒
+    last_time = current_time;
+    if (period < 2) {
+      task3_result = period;
     }
 
     return;
   }
+}
 
-
+void detect_vertical() {
+  static int dist_min = INT_MAX;
+  if (tfDist < dist_min) {
+    dist_min = tfDist;
+  }
+  if (task_index == 4 && tfDist <= dist_min+1) {
+    alpha_sample_push(angle_sample[10]);
+    task4_result = alpha_sample_avg();
+    return;
+  }
 }

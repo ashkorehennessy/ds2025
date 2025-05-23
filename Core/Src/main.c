@@ -18,8 +18,8 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "cmsis_os.h"
 #include "i2c.h"
-#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -51,6 +51,7 @@
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
+void MX_FREERTOS_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -89,7 +90,6 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_TIM2_Init();
   MX_USART1_UART_Init();
   MX_I2C1_Init();
   MX_I2C2_Init();
@@ -97,25 +97,78 @@ int main(void)
   /* USER CODE BEGIN 2 */
   HAL_UART_Receive_IT(&huart1, &uart1_rx_byte, 1);
   MPU6050_Init(&hi2c2);
-  HAL_Delay(10);
-  mprintf("init\n");
-  TF_Luna_init(&TF_Luna_1, &hi2c1, 0x10);
-  HAL_TIM_Base_Start_IT(&htim2);
+  HAL_Delay(50);
+  mprintf("init main\n");
+  initVL53L0X(1, &hi2c1);
+  // Configure the sensor for high accuracy and speed in 20 cm.
+  setSignalRateLimit(200);
+  setVcselPulsePeriod(VcselPeriodPreRange, 6);
+  setVcselPulsePeriod(VcselPeriodFinalRange, 12);
+  setMeasurementTimingBudget(500 * 1000UL);
+  mprintf("init vl53l0x success\n");
   /* USER CODE END 2 */
+
+  /* Init scheduler */
+  osKernelInitialize();
+
+  /* Call init function for freertos objects (in cmsis_os2.c) */
+  MX_FREERTOS_Init();
+
+  /* Start scheduler */
+  osKernelStart();
+
+  /* We should never get here as control is now taken by the scheduler */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    // mprintf("%.2f\n", angle_mix);
-//    mprintf("tfDist:%d,tfFlux:%d,tfTemp:%d\r\n", tfDist, tfFlux, tfTemp);
-
-    if (uart1_rx_done)
-    {
-      process_uart1_buffer();
-    }
     HAL_GPIO_TogglePin(GPIOC,GPIO_PIN_13);
-    HAL_Delay(20);
+    // mprintf("%.2f\n", angle_mix);
+    // mprintf("tfDist:%d\n", tfDist);
+
+    tfDist = readRangeSingleMillimeters(&distanceStr);
+    MPU6050_Read_All(&hi2c2,&mpu6050);
+
+    if(led_count > 0){
+      led_count -= 20;
+      HAL_GPIO_WritePin(GPIOB,GPIO_PIN_4,GPIO_PIN_SET);
+    } else{
+      HAL_GPIO_WritePin(GPIOB,GPIO_PIN_4,GPIO_PIN_RESET);
+    }
+    angle_mix = sqrt(pow(mpu6050.KalmanAngleX,2) + pow(mpu6050.KalmanAngleY,2));
+    angle_sample_push(angle_mix);
+    switch(task_index){
+      case 1:
+        task1_count++;
+        if (task1_count > 200){
+          task1_count = 0;
+          mprintf("系统开机\n");
+        }
+        break;
+      case 2:
+        detect_peaks_and_valleys();
+        if (task2_result != -1) {
+          mprintf("长度l:%.2f\n", task2_result);
+          task2_result = -1;
+        }
+        break;
+      case 3:
+        detect_peaks_and_valleys();
+        if (task3_result != -1) {
+          mprintf("周期T:%.2fs\n", task3_result);
+          task3_result = -1;
+        }
+        break;
+      case 4:
+        detect_vertical();
+        if (task4_result != -1) {
+          mprintf("α角:%.2f\n", task4_result);
+          task4_result = -1;
+        }
+        break;
+
+    }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -187,11 +240,37 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
       uart1_rx_index = 0;  // 溢出保护，清空
     }
 
+    if (uart1_rx_done)
+    {
+      process_uart1_buffer();
+    }
     // 继续接收下一个字节
     HAL_UART_Receive_IT(&huart1, &uart1_rx_byte, 1);
   }
 }
 /* USER CODE END 4 */
+
+/**
+  * @brief  Period elapsed callback in non blocking mode
+  * @note   This function is called  when TIM2 interrupt took place, inside
+  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
+  * a global variable "uwTick" used as application time base.
+  * @param  htim : TIM handle
+  * @retval None
+  */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  /* USER CODE BEGIN Callback 0 */
+
+  /* USER CODE END Callback 0 */
+  if (htim->Instance == TIM2)
+  {
+    HAL_IncTick();
+  }
+  /* USER CODE BEGIN Callback 1 */
+
+  /* USER CODE END Callback 1 */
+}
 
 /**
   * @brief  This function is executed in case of error occurrence.
