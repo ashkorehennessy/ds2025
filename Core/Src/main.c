@@ -61,7 +61,17 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+void process_uart1_buffer(void)
+{
+  for (uint16_t i = 0; i < uart1_rx_index; i++) {
+    if (uart1_rx_buf[i] >= 'a' && uart1_rx_buf[i] <= 'z') {
+      uart1_rx_buf[i] -= 32; // 转大写
+    }
+  }
+  HAL_UART_Transmit(&huart1, (uint8_t*)uart1_rx_buf, uart1_rx_index, 1000);
+  uart1_rx_index = 0;    // 清空索引
+  uart1_rx_done = 0;     // 清空标志
+}
 /* USER CODE END 0 */
 
 /**
@@ -99,11 +109,13 @@ int main(void)
   MX_I2C2_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-  MPU6050_Init(&hi2c1);
+  HAL_UART_Receive_IT(&huart1, &uart1_rx_byte, 1);
+  MPU6050_Init(&hi2c2);
   HAL_Delay(10);
-  HAL_TIM_Base_Start_IT(&htim2);
   sprintf(buf,"init\n");
   HAL_UART_Transmit(&huart1, (uint8_t *)buf, sizeof(buf), 1000);
+  TF_Luna_init(&TF_Luna_1, &hi2c1, 0x10);
+  HAL_TIM_Base_Start_IT(&htim2);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -113,7 +125,15 @@ int main(void)
     memset(buf, 0, sizeof(buf));
     sprintf(buf,"Angle:%f,%f,%f\n", mpu6050.KalmanAngleX, mpu6050.KalmanAngleY, mpu6050.AngleZ);
     HAL_UART_Transmit(&huart1, (uint8_t*) buf, sizeof(buf), 1000);
-    HAL_Delay(10);
+    memset(buf, 0, sizeof(buf));
+
+    // sprintf(buf,"tfDist:%d,tfFlux:%d,tfTemp:%d\r\n", tfDist, tfFlux, tfTemp);
+    // HAL_UART_Transmit(&huart1, (uint8_t*) buf, sizeof(buf), 1000);
+    if (uart1_rx_done)
+    {
+      process_uart1_buffer();
+    }
+    HAL_Delay(200);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -167,7 +187,28 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+  if (huart->Instance == USART1)
+  {
+    if (uart1_rx_index < UART_RX_BUF_SIZE - 1)
+    {
+      uart1_rx_buf[uart1_rx_index++] = uart1_rx_byte;
 
+      if (uart1_rx_byte == UART_RX_END_CHAR)
+      {
+        uart1_rx_done = 1;  // 标志位，主循环中处理
+      }
+    }
+    else
+    {
+      uart1_rx_index = 0;  // 溢出保护，清空
+    }
+
+    // 继续接收下一个字节
+    HAL_UART_Receive_IT(&huart1, &uart1_rx_byte, 1);
+  }
+}
 /* USER CODE END 4 */
 
 /**
