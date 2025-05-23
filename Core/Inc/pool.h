@@ -16,7 +16,7 @@
     do {                                    \
         memset(buf,0,sizeof(buf));           \
         sprintf((char*)buf, fmt, ##__VA_ARGS__);              \
-        HAL_UART_Transmit(&huart1, buf, sizeof(buf), 1000); \
+        HAL_UART_Transmit(&huart1, buf, strlen(buf), 1000); \
     } while(0)
 #define UART_RX_BUF_SIZE 128
 #define UART_RX_END_CHAR '\n'
@@ -41,5 +41,6 @@ extern volatile uint16_t uart1_rx_index;  // 当前缓冲区索引
 extern volatile uint8_t uart1_rx_done;    // 接收完成标志
 void angle_sample_push(float angle);
 void process_uart1_buffer(void);
+void detect_peaks_and_valleys();
 
 #endif //POOL_H

@@ -107,7 +107,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    mprintf("Angle:%f,%f,%f,%f\n", mpu6050.KalmanAngleX, mpu6050.KalmanAngleY, mpu6050.AngleZ,angle_mix);
+    // mprintf("%.2f\n", angle_mix);
 //    mprintf("tfDist:%d,tfFlux:%d,tfTemp:%d\r\n", tfDist, tfFlux, tfTemp);
 
     if (uart1_rx_done)

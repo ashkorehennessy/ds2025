@@ -211,12 +211,14 @@ void TIM2_IRQHandler(void)
   MPU6050_Read_All(&hi2c2,&mpu6050);
 
   if(led_count > 0){
-    led_count--;
+    led_count -= 10;
     HAL_GPIO_WritePin(GPIOB,GPIO_PIN_4,GPIO_PIN_SET);
   } else{
     HAL_GPIO_WritePin(GPIOB,GPIO_PIN_4,GPIO_PIN_RESET);
   }
   angle_mix = sqrt(pow(mpu6050.KalmanAngleX,2) + pow(mpu6050.KalmanAngleY,2));
+  angle_sample_push(angle_mix);
+  detect_peaks_and_valleys();
   switch(task_index){
     case 1:
       task1_count++;
@@ -226,10 +228,12 @@ void TIM2_IRQHandler(void)
       }
       break;
     case 2:
-      if(task2_fool == 1){
-        mprintf("L:%f\n", task2_result+(float)(random()%10) / 10 - 0.5);
-        task2_fool = 0;
+      if (task2_result != -1) {
+        mprintf("l值:%.0f\n", task2_result);
+        task2_result = -1;
       }
+      break;
+
 
   }
   /* USER CODE END TIM2_IRQn 0 */
