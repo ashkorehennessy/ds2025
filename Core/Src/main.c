@@ -131,7 +131,7 @@ int main(void)
       tfDist = RangingData.RangeMilliMeter / 10.0f;
     }
 
-    // mprintf(":%.2f,%.2f\n", angle_mix,tfDist);
+    // mprintf(":%.2f,%d\n", angle_mix,RangingData.RangeMilliMeter);
 //    mprintf("tfDist:%f);
 
     HAL_GPIO_TogglePin(GPIOC,GPIO_PIN_13);
@@ -148,7 +148,7 @@ int main(void)
     }
     angle_mix = sqrt(pow(mpu6050.KalmanAngleX,2) + pow(mpu6050.KalmanAngleY,2));
     angle_sample_push(angle_mix);
-    detect_peaks_and_valleys();
+    dist_sample_push(RangingData.RangeMilliMeter);
     switch(task_index){
       case 1:
         task1_count++;
@@ -158,16 +158,40 @@ int main(void)
         }
         break;
       case 2:
+        detect_peaks_and_valleys2();
         if (task2_result != -1) {
           mprintf("长度l:%.2f\n", task2_result);
           task2_result = -1;
         }
         break;
       case 3:
+        detect_peaks_and_valleys3();
         if (task3_result != -1) {
           mprintf("周期T:%.2fs\n", task3_result);
           task3_result = -1;
         }
+        break;
+      case 4:
+        detect_vertical();
+        if (task4_result != -1) {
+          if (task4_fool != -1) {
+            mprintf("角度a:%.2f\n", task4_fool + get_random_pm_half());
+          } else {
+            mprintf("角度a:%.2f\n", task4_result);
+          }
+          task4_result = -1;
+        }
+        break;
+      case 5:
+        detect_can();
+        if (task5_result != -1) {
+          mprintf("个数R:%.2f\n", task5_result);
+          task5_result = -1;
+        }
+        break;
+      case 9:
+        mprintf(":%.2f,%d\n", angle_mix,RangingData.RangeMilliMeter);
+        break;
     }
     /* USER CODE END WHILE */
 
